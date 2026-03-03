@@ -57,6 +57,7 @@ model WorkoutDay {
   workoutPlanId String
   workoutPlan   WorkoutPlan       @relation(fields: [workoutPlanId], references: [id])
   isRest        Boolean           @default(false)
+  estimatedDurationInSeconds Int
   weekDay       WeekDay
   exercises     WorkoutExercise[]
   createdAt     DateTime          @default(now()) @db.Timestamptz()
