@@ -1,0 +1,25 @@
+{
+  "servers": {
+    "serena": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/oraios/serena",
+        "serena",
+        "start-mcp",
+        "--project",
+        ".",
+        "--claude-code"
+      ]
+    },
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "ctx7sk-1a0c87e8-e757-47b7-a84a-94c3180183bc"
+      }
+    }
+  },
+  "inputs": []
+}
