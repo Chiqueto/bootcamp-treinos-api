@@ -38,3 +38,19 @@ export const StartWorkoutSessionParamsSchema = z.object({
 export const StartWorkoutSessionResponseSchema = z.object({
   userWorkoutSessionId: z.uuid(),
 });
+
+export const UpdateWorkoutSessionParamsSchema = z.object({
+  workoutPlanId: z.uuid(),
+  workoutDayId: z.uuid(),
+  sessionId: z.uuid(),
+});
+
+export const UpdateWorkoutSessionBodySchema = z.object({
+  completedAt: z.iso.datetime(),
+});
+
+export const UpdateWorkoutSessionResponseSchema = z.object({
+  id: z.uuid(),
+  startedAt: z.iso.datetime(),
+  completedAt: z.iso.datetime(),
+});
