@@ -33,13 +33,21 @@ await app.register(fastifySwagger, {
         description: "Localhost",
         url: "http://localhost:8080",
       },
+      {
+        description: "GitHub Codespace",
+        url: "https://shiny-trout-7xqw455j4vxhp44q-8080.app.github.dev",
+      },
     ],
   },
   transform: jsonSchemaTransform,
 });
 
 await app.register(fastifyCors, {
-  origin: ["http://localhost:3000"],
+  origin: [
+    "http://localhost:3000",
+    "https://localhost:8080",
+    "https://shiny-trout-7xqw455j4vxhp44q-8080.app.github.dev",
+  ],
   credentials: true,
 });
 
