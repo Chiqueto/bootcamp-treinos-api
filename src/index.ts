@@ -47,7 +47,7 @@ await app.register(fastifySwagger, {
 await app.register(fastifyCors, {
   origin: [
     "http://localhost:3000",
-    "https://localhost:8080",
+    "http://localhost:8080",
     "https://shiny-trout-7xqw455j4vxhp44q-8080.app.github.dev",
   ],
   credentials: true,
