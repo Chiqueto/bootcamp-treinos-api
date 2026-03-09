@@ -3,19 +3,16 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { openAPI } from "better-auth/plugins";
 
 import { prisma } from "./db.js";
+import { env } from "./env.js";
 
 export const auth = betterAuth({
-  baseURL: process.env.BETTER_AUTH_URL!,
-  trustedOrigins: [
-    "http://localhost:3000",
-    "https://shiny-trout-7xqw455j4vxhp44q-8080.app.github.dev",
-    "https://localhost:8080",
-  ],
+  baseURL: env.API_BASE_URL,
+  trustedOrigins: [env.WEB_APP_BASE_URL],
 
   socialProviders: {
     google: {
-      clientId: process.env.GOOGLE_CLIENT_ID! as string,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET! as string,
+      clientId: env.GOOGLE_CLIENT_ID,
+      clientSecret: env.GOOGLE_CLIENT_SECRET,
     },
   },
   database: prismaAdapter(prisma, {
