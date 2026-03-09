@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "dev": "tsx --watch src/index.ts .env"
+    "dev": "tsx --watch src/index.ts .env",
+    "build": "tsc"
   },
   "engines": {
     "node": "24.x"
@@ -28,6 +29,7 @@
   "dependencies": {
     "@ai-sdk/google": "^3.0.43",
     "@ai-sdk/openai": "3.0.33",
+    "@better-auth/prisma-adapter": "^1.5.4",
     "@fastify/cors": "^11.2.0",
     "@fastify/swagger": "^9.7.0",
     "@prisma/adapter-pg": "^7.4.0",
