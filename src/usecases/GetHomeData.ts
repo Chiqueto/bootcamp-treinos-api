@@ -36,7 +36,7 @@ interface InputDto {
 
 interface OutputDto {
   activeWorkoutPlanId: string;
-  todayWorkoutDay: {
+  todayWorkoutDay?: {
     workoutPlanId: string;
     id: string;
     name: string;
@@ -85,10 +85,6 @@ export class GetHomeData {
     const todayWorkoutDay = activeWorkoutPlan.workoutDays.find(
       (day) => day.weekDay === currentWeekDay,
     );
-
-    if (!todayWorkoutDay) {
-      throw new NotFoundError("Workout day not found for today");
-    }
 
     // Calculate week range (Sunday to Saturday) in UTC
     const weekStart = currentDate.day(0).startOf("day");
@@ -144,16 +140,20 @@ export class GetHomeData {
 
     return {
       activeWorkoutPlanId: activeWorkoutPlan.id,
-      todayWorkoutDay: {
-        workoutPlanId: activeWorkoutPlan.id,
-        id: todayWorkoutDay.id,
-        name: todayWorkoutDay.name,
-        isRest: todayWorkoutDay.isRest,
-        weekDay: todayWorkoutDay.weekDay,
-        estimatedDurationInSeconds: todayWorkoutDay.estimatedDurationInSeconds,
-        coverImageUrl: todayWorkoutDay.coverImageUrl,
-        exercisesCount: todayWorkoutDay.exercises.length,
-      },
+      todayWorkoutDay:
+        todayWorkoutDay && activeWorkoutPlan
+          ? {
+              workoutPlanId: activeWorkoutPlan.id,
+              id: todayWorkoutDay.id,
+              name: todayWorkoutDay.name,
+              isRest: todayWorkoutDay.isRest,
+              weekDay: todayWorkoutDay.weekDay,
+              estimatedDurationInSeconds:
+                todayWorkoutDay.estimatedDurationInSeconds,
+              coverImageUrl: todayWorkoutDay.coverImageUrl ?? null,
+              exercisesCount: todayWorkoutDay.exercises.length,
+            }
+          : undefined,
       workoutStreak,
       consistencyByDay,
     };
