@@ -189,10 +189,10 @@ export class GetHomeData {
       }
 
       // Rest days count as completed automatically
-      if (workoutDay.isRest) {
-        streak++;
-        continue;
-      }
+      // if (workoutDay.isRest) {
+      //   streak++;
+      //   continue;
+      // }
 
       // Check if the workout day has a completed session on this date
       const hasCompletedSession = workoutDay.sessions.some((session) => {
