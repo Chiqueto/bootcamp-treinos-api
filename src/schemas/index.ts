@@ -112,6 +112,10 @@ export const HomeParamsSchema = z.object({
   date: z.iso.date(),
 });
 
+export const HomeQuerySchema = z.object({
+  timezoneOffset: z.coerce.number().int(),
+});
+
 export const HomeResponseSchema = z.object({
   activeWorkoutPlanId: z.uuid(),
   todayWorkoutDay: z
@@ -177,6 +181,7 @@ export const ListWorkoutPlansResponseSchema = z.object({
 export const StatsQuerySchema = z.object({
   from: z.iso.date(),
   to: z.iso.date(),
+  timezoneOffset: z.coerce.number().int(),
 });
 
 export const StatsResponseSchema = z.object({

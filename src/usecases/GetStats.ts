@@ -22,6 +22,7 @@ interface InputDto {
   userId: string;
   from: string;
   to: string;
+  timezoneOffset: number;
 }
 
 interface OutputDto {
@@ -40,8 +41,14 @@ interface OutputDto {
 
 export class GetStats {
   async execute(dto: InputDto): Promise<OutputDto> {
-    const fromDate = dayjs.utc(dto.from).startOf("day");
-    const toDate = dayjs.utc(dto.to).endOf("day");
+    const fromDate = dayjs
+      .utc(dto.from)
+      .startOf("day")
+      .subtract(dto.timezoneOffset, "minute");
+    const toDate = dayjs
+      .utc(dto.to)
+      .endOf("day")
+      .subtract(dto.timezoneOffset, "minute");
 
     // Fetch all sessions in the range for the user
     const sessions = await prisma.workoutSession.findMany({
@@ -65,7 +72,10 @@ export class GetStats {
     >();
 
     sessions.forEach((session) => {
-      const dateKey = dayjs.utc(session.startedAt).format("YYYY-MM-DD");
+      const dateKey = dayjs
+        .utc(session.startedAt)
+        .utcOffset(dto.timezoneOffset)
+        .format("YYYY-MM-DD");
       const existing = sessionsByDate.get(dateKey) ?? [];
       existing.push({
         startedAt: session.startedAt,
@@ -108,7 +118,11 @@ export class GetStats {
       }, 0);
 
     // workoutStreak
-    const workoutStreak = await this.calculateStreak(dto.userId, toDate);
+    const workoutStreak = await this.calculateStreak(
+      dto.userId,
+      toDate,
+      dto.timezoneOffset,
+    );
 
     return {
       workoutStreak,
@@ -122,6 +136,7 @@ export class GetStats {
   private async calculateStreak(
     userId: string,
     endDate: dayjs.Dayjs,
+    timezoneOffset: number,
   ): Promise<number> {
     // Get the active workout plan to know which weekdays are scheduled
     const activeWorkoutPlan = await prisma.workoutPlan.findFirst({
@@ -167,7 +182,10 @@ export class GetStats {
 
       // Check if the workout day has a completed session on this date
       const hasCompletedSession = workoutDay.sessions.some((session) => {
-        const sessionDate = dayjs.utc(session.startedAt).format("YYYY-MM-DD");
+        const sessionDate = dayjs
+          .utc(session.startedAt)
+          .utcOffset(timezoneOffset)
+          .format("YYYY-MM-DD");
         return sessionDate === checkDateStr && session.completedAt !== null;
       });
 

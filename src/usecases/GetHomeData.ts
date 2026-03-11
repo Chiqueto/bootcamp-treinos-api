@@ -32,6 +32,7 @@ const WEEKDAY_ORDER: Record<string, number> = {
 interface InputDto {
   userId: string;
   date: string;
+  timezoneOffset: number;
 }
 
 interface OutputDto {
@@ -86,9 +87,16 @@ export class GetHomeData {
       (day) => day.weekDay === currentWeekDay,
     );
 
-    // Calculate week range (Sunday to Saturday) in UTC
-    const weekStart = currentDate.day(0).startOf("day");
-    const weekEnd = currentDate.day(6).endOf("day");
+    // Calculate week range (Sunday to Saturday) adjusted for user's timezone
+    // weekStart/weekEnd represent local midnight boundaries converted to UTC
+    const weekStart = currentDate
+      .day(0)
+      .startOf("day")
+      .subtract(dto.timezoneOffset, "minute");
+    const weekEnd = currentDate
+      .day(6)
+      .endOf("day")
+      .subtract(dto.timezoneOffset, "minute");
 
     // Fetch all sessions in the week range
     const sessionsInWeek = await prisma.workoutSession.findMany({
@@ -113,12 +121,14 @@ export class GetHomeData {
     > = {};
 
     for (let i = 0; i <= 6; i++) {
-      const day = weekStart.add(i, "day");
-      const dateKey = day.format("YYYY-MM-DD");
+      const dateKey = currentDate.day(i).format("YYYY-MM-DD");
 
       const daySessions = sessionsInWeek.filter(
         (session) =>
-          dayjs.utc(session.startedAt).format("YYYY-MM-DD") === dateKey,
+          dayjs
+            .utc(session.startedAt)
+            .utcOffset(dto.timezoneOffset)
+            .format("YYYY-MM-DD") === dateKey,
       );
 
       const workoutDayStarted = daySessions.length > 0;
@@ -136,6 +146,7 @@ export class GetHomeData {
     const workoutStreak = this.calculateStreak(
       activeWorkoutPlan.workoutDays,
       currentDate,
+      dto.timezoneOffset,
     );
 
     return {
@@ -166,6 +177,7 @@ export class GetHomeData {
       sessions: Array<{ completedAt: Date | null; startedAt: Date }>;
     }>,
     currentDate: dayjs.Dayjs,
+    timezoneOffset: number,
   ): number {
     // Sort workout days by weekday order
     const sortedDays = [...workoutDays].sort(
@@ -196,7 +208,10 @@ export class GetHomeData {
 
       // Check if the workout day has a completed session on this date
       const hasCompletedSession = workoutDay.sessions.some((session) => {
-        const sessionDate = dayjs.utc(session.startedAt).format("YYYY-MM-DD");
+        const sessionDate = dayjs
+          .utc(session.startedAt)
+          .utcOffset(timezoneOffset)
+          .format("YYYY-MM-DD");
         return sessionDate === checkDateStr && session.completedAt !== null;
       });
 

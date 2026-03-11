@@ -7,6 +7,7 @@ import { auth } from "../lib/auth.js";
 import {
   ErrorSchema,
   HomeParamsSchema,
+  HomeQuerySchema,
   HomeResponseSchema,
 } from "../schemas/index.js";
 import { GetHomeData } from "../usecases/GetHomeData.js";
@@ -20,6 +21,7 @@ export const homeRoutes = async (app: FastifyInstance) => {
       tags: ["Home"],
       summary: "Get home page data",
       params: HomeParamsSchema,
+      querystring: HomeQuerySchema,
       response: {
         200: HomeResponseSchema,
         401: ErrorSchema,
@@ -43,6 +45,7 @@ export const homeRoutes = async (app: FastifyInstance) => {
         const result = await getHomeData.execute({
           userId: session.user.id,
           date: request.params.date,
+          timezoneOffset: request.query.timezoneOffset,
         });
 
         return reply.status(200).send(result);
