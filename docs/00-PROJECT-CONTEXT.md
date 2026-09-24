@@ -2,7 +2,7 @@
 
 ## Produto
 
-**FIT.AI** é uma plataforma mobile-first para criação, execução e acompanhamento de treinos.
+**Trainvy** (anteriormente FIT.AI) é uma plataforma mobile-first para criação, execução e acompanhamento de treinos.
 
 Visão:
 

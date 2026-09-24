@@ -34,22 +34,22 @@ describe("Task 0.5 — Configuração de Autenticação, Cookies e Origens", () 
     });
 
     it("Cenário 2 — Com AUTH_COOKIE_DOMAIN válido: habilita cross-subdomain cookies com o domínio informado", () => {
-      const config1 = resolveAuthCookieConfig("fitai.com.br");
+      const config1 = resolveAuthCookieConfig("trainvy.com.br");
       expect(config1).toEqual({
         enabled: true,
-        domain: "fitai.com.br",
+        domain: "trainvy.com.br",
       });
 
-      const configWithLeadingDot = resolveAuthCookieConfig(".fitai.com.br");
+      const configWithLeadingDot = resolveAuthCookieConfig(".trainvy.com.br");
       expect(configWithLeadingDot).toEqual({
         enabled: true,
-        domain: ".fitai.com.br",
+        domain: ".trainvy.com.br",
       });
 
-      const configWithTrim = resolveAuthCookieConfig("  fitai.com.br  ");
+      const configWithTrim = resolveAuthCookieConfig("  trainvy.com.br  ");
       expect(configWithTrim).toEqual({
         enabled: true,
-        domain: "fitai.com.br",
+        domain: "trainvy.com.br",
       });
     });
 
@@ -101,14 +101,14 @@ describe("Task 0.5 — Configuração de Autenticação, Cookies e Origens", () 
 
     it("adiciona origens extras passadas como array", () => {
       const origins = resolveTrustedOrigins("http://localhost:3000", [
-        "https://app.fitai.com.br",
-        "https://fitai-preview.vercel.app/",
+        "https://app.trainvy.com.br",
+        "https://trainvy-preview.vercel.app/",
       ]);
 
       expect(origins).toEqual([
         "http://localhost:3000",
-        "https://app.fitai.com.br",
-        "https://fitai-preview.vercel.app",
+        "https://app.trainvy.com.br",
+        "https://trainvy-preview.vercel.app",
       ]);
     });
 
@@ -128,12 +128,12 @@ describe("Task 0.5 — Configuração de Autenticação, Cookies e Origens", () 
     it("ignora entradas vazias e desduplica origens", () => {
       const origins = resolveTrustedOrigins(
         "http://localhost:3000",
-        "http://localhost:3000, ,   , https://app.fitai.com.br"
+        "http://localhost:3000, ,   , https://app.trainvy.com.br"
       );
 
       expect(origins).toEqual([
         "http://localhost:3000",
-        "https://app.fitai.com.br",
+        "https://app.trainvy.com.br",
       ]);
     });
 
@@ -147,18 +147,18 @@ describe("Task 0.5 — Configuração de Autenticação, Cookies e Origens", () 
     describe("resolveAuthBaseUrl", () => {
       it("utiliza AUTH_BASE_URL explícita quando definida (cenário de homologação)", () => {
         const url = resolveAuthBaseUrl(
-          "https://fitai-api.vercel.app",
-          "https://fitai-web.vercel.app/backend/api/auth"
+          "https://trainvy-api.vercel.app",
+          "https://trainvy-web.vercel.app/backend/api/auth"
         );
-        expect(url).toBe("https://fitai-web.vercel.app/backend/api/auth");
+        expect(url).toBe("https://trainvy-web.vercel.app/backend/api/auth");
       });
 
       it("remove trailing slash de AUTH_BASE_URL", () => {
         const url = resolveAuthBaseUrl(
-          "https://fitai-api.vercel.app",
-          "https://fitai-web.vercel.app/backend/api/auth/"
+          "https://trainvy-api.vercel.app",
+          "https://trainvy-web.vercel.app/backend/api/auth/"
         );
-        expect(url).toBe("https://fitai-web.vercel.app/backend/api/auth");
+        expect(url).toBe("https://trainvy-web.vercel.app/backend/api/auth");
       });
 
       it("faz fallback para ${API_BASE_URL}/api/auth quando AUTH_BASE_URL não está definida (cenário local)", () => {
@@ -175,7 +175,7 @@ describe("Task 0.5 — Configuração de Autenticação, Cookies e Origens", () 
     describe("Google OAuth Redirect URI via Better Auth", () => {
       it("gera redirect_uri apontando para o gateway /backend e não para a URL física da API", async () => {
         const testAuth = betterAuth({
-          baseURL: "https://fitai-web.vercel.app/backend/api/auth",
+          baseURL: "https://trainvy-web.vercel.app/backend/api/auth",
           socialProviders: {
             google: {
               clientId: "test-client-id",
@@ -187,7 +187,7 @@ describe("Task 0.5 — Configuração de Autenticação, Cookies e Origens", () 
         const res = await testAuth.api.signInSocial({
           body: {
             provider: "google",
-            callbackURL: "https://fitai-web.vercel.app/",
+            callbackURL: "https://trainvy-web.vercel.app/",
           },
         });
 
@@ -199,10 +199,10 @@ describe("Task 0.5 — Configuração de Autenticação, Cookies e Origens", () 
         const redirectUri = googleAuthUrl.searchParams.get("redirect_uri");
 
         expect(redirectUri).toBe(
-          "https://fitai-web.vercel.app/backend/api/auth/callback/google"
+          "https://trainvy-web.vercel.app/backend/api/auth/callback/google"
         );
         expect(redirectUri).toContain("/backend");
-        expect(redirectUri).not.toContain("fitai-api.vercel.app");
+        expect(redirectUri).not.toContain("trainvy-api.vercel.app");
       });
     });
 
@@ -252,21 +252,21 @@ describe("Task 0.5 — Configuração de Autenticação, Cookies e Origens", () 
         };
 
         // 1. rewrite /backend/ai aponta para /ai
-        expect(resolveRewrite("https://fitai-api.vercel.app", "ai")).toBe(
-          "https://fitai-api.vercel.app/ai"
+        expect(resolveRewrite("https://trainvy-api.vercel.app", "ai")).toBe(
+          "https://trainvy-api.vercel.app/ai"
         );
         expect(resolveRewrite(undefined, "ai")).toBe("http://localhost:8080/ai");
 
         // 2. rewrite /backend/api/auth/... aponta para /api/auth/...
         expect(
           resolveRewrite(
-            "https://fitai-api.vercel.app",
+            "https://trainvy-api.vercel.app",
             "api/auth/callback/google"
           )
-        ).toBe("https://fitai-api.vercel.app/api/auth/callback/google");
+        ).toBe("https://trainvy-api.vercel.app/api/auth/callback/google");
         expect(
-          resolveRewrite("https://fitai-api.vercel.app", "api/auth/get-session")
-        ).toBe("https://fitai-api.vercel.app/api/auth/get-session");
+          resolveRewrite("https://trainvy-api.vercel.app", "api/auth/get-session")
+        ).toBe("https://trainvy-api.vercel.app/api/auth/get-session");
       });
 
       it("auth-client do frontend resolve baseURL contendo /api/auth", () => {
@@ -288,10 +288,10 @@ describe("Task 0.5 — Configuração de Autenticação, Cookies e Origens", () 
           return apiUrl.endsWith("/api/auth") ? apiUrl : `${apiUrl}/api/auth`;
         };
 
-        // Em homologação com NEXT_PUBLIC_API_URL=https://fitai-web.vercel.app/backend
+        // Em homologação com NEXT_PUBLIC_API_URL=https://trainvy-web.vercel.app/backend
         expect(
-          resolveAuthClientBaseUrl("https://fitai-web.vercel.app/backend")
-        ).toBe("https://fitai-web.vercel.app/backend/api/auth");
+          resolveAuthClientBaseUrl("https://trainvy-web.vercel.app/backend")
+        ).toBe("https://trainvy-web.vercel.app/backend/api/auth");
 
         // Em desenvolvimento local com NEXT_PUBLIC_API_URL=http://localhost:8080
         expect(resolveAuthClientBaseUrl("http://localhost:8080")).toBe(
@@ -301,9 +301,9 @@ describe("Task 0.5 — Configuração de Autenticação, Cookies e Origens", () 
         // Se já contiver /api/auth
         expect(
           resolveAuthClientBaseUrl(
-            "https://fitai-web.vercel.app/backend/api/auth"
+            "https://trainvy-web.vercel.app/backend/api/auth"
           )
-        ).toBe("https://fitai-web.vercel.app/backend/api/auth");
+        ).toBe("https://trainvy-web.vercel.app/backend/api/auth");
       });
     });
   });

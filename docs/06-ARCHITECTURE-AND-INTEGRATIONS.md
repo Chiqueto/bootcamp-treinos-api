@@ -62,11 +62,11 @@ Para contornar as limitações de cookies entre subdomínios `*.vercel.app` (res
 ```text
 Browser / Client
       │
-      │ https://fitai-web.vercel.app/backend/*
+      │ https://trainvy-web.vercel.app/backend/*
       ▼
 Next.js Gateway (Rewrite transparente via next.config.ts)
       │
-      │ https://fitai-api.vercel.app/* (BACKEND_ORIGIN)
+      │ https://trainvy-api.vercel.app/* (BACKEND_ORIGIN)
       ▼
 Fastify API (Sem prefixo /backend nas rotas internas)
 ```
@@ -75,9 +75,9 @@ Fastify API (Sem prefixo /backend nas rotas internas)
 
 | Canal | Browser URL | Next.js Rewrite | Fastify Route |
 | :--- | :--- | :--- | :--- |
-| **Orval (Domínio)** | `https://fitai-web.vercel.app/backend/<endpoint>` | `${BACKEND_ORIGIN}/<endpoint>` | `/<endpoint>` (ex: `/home`, `/workout-plans`) |
-| **AI SDK** | `https://fitai-web.vercel.app/backend/ai` | `${BACKEND_ORIGIN}/ai` | `/ai` |
-| **Better Auth Client** | `https://fitai-web.vercel.app/backend/api/auth/*` | `${BACKEND_ORIGIN}/api/auth/*` | `/api/auth/*` (ex: `/api/auth/get-session`) |
+| **Orval (Domínio)** | `https://trainvy-web.vercel.app/backend/<endpoint>` | `${BACKEND_ORIGIN}/<endpoint>` | `/<endpoint>` (ex: `/home`, `/workout-plans`) |
+| **AI SDK** | `https://trainvy-web.vercel.app/backend/ai` | `${BACKEND_ORIGIN}/ai` | `/ai` |
+| **Better Auth Client** | `https://trainvy-web.vercel.app/backend/api/auth/*` | `${BACKEND_ORIGIN}/api/auth/*` | `/api/auth/*` (ex: `/api/auth/get-session`) |
 
 ## Auth
 
@@ -95,15 +95,15 @@ Status da Fase 0 (concluído):
 ### Configuração do Google Cloud Console (OAuth 2.0) para Homologação
 
 - **Authorized JavaScript origins:**
-  - `https://fitai-web.vercel.app`
+  - `https://trainvy-web.vercel.app`
   - `http://localhost:3000` (desenvolvimento local)
 - **Authorized redirect URIs:**
-  - `https://fitai-web.vercel.app/backend/api/auth/callback/google`
+  - `https://trainvy-web.vercel.app/backend/api/auth/callback/google`
   - `http://localhost:8080/api/auth/callback/google` (desenvolvimento local direto)
   - `http://localhost:3000/backend/api/auth/callback/google` (desenvolvimento local via proxy)
 
 > [!IMPORTANT]
-> A URL física da API (`https://fitai-api.vercel.app`) **NÃO** deve ser usada como callback do navegador enquanto a estratégia de gateway proxy estiver ativa.
+> A URL física da API (`https://trainvy-api.vercel.app`) **NÃO** deve ser usada como callback do navegador enquanto a estratégia de gateway proxy estiver ativa.
 
 ## Banco
 
@@ -121,16 +121,16 @@ Primeira opção: PostgreSQL + pgvector, evitando nova infraestrutura sem necess
 
 ## Deploy & Variáveis de Ambiente (Homologação Vercel)
 
-- Frontend: Vercel (`fitai-web.vercel.app`).
-- API Fastify: Vercel (`fitai-api.vercel.app`).
+- Frontend: Vercel (`trainvy-web.vercel.app`).
+- API Fastify: Vercel (`trainvy-api.vercel.app`).
 
 ### Variáveis no Frontend (`bootcamp-treinos-frontend`)
 
 | Variável | Valor para Homologação | Descrição |
 | :--- | :--- | :--- |
-| `NEXT_PUBLIC_BASE_URL` | `https://fitai-web.vercel.app` | URL canônica do frontend |
-| `NEXT_PUBLIC_API_URL` | `https://fitai-web.vercel.app/backend` | Gateway público para Orval, AI e Auth |
-| `BACKEND_ORIGIN` | `https://fitai-api.vercel.app` | **SERVER-ONLY**: Destino físico do rewrite |
+| `NEXT_PUBLIC_BASE_URL` | `https://trainvy-web.vercel.app` | URL canônica do frontend |
+| `NEXT_PUBLIC_API_URL` | `https://trainvy-web.vercel.app/backend` | Gateway público para Orval, AI e Auth |
+| `BACKEND_ORIGIN` | `https://trainvy-api.vercel.app` | **SERVER-ONLY**: Destino físico do rewrite |
 
 ### Variáveis no Backend (`bootcamp-treinos-api`)
 
@@ -138,9 +138,9 @@ Primeira opção: PostgreSQL + pgvector, evitando nova infraestrutura sem necess
 | :--- | :--- | :--- |
 | `DATABASE_URL` | `postgresql://...` | Banco de produção/staging Neon |
 | `BETTER_AUTH_SECRET` | `(secret 32+ chars)` | Chave do Better Auth |
-| `API_BASE_URL` | `https://fitai-api.vercel.app` | URL física da API (OpenAPI/Swagger) |
-| `AUTH_BASE_URL` | `https://fitai-web.vercel.app/backend/api/auth` | URL pública de autenticação e OAuth callbacks |
-| `WEB_APP_BASE_URL` | `https://fitai-web.vercel.app` | Frontend base para CORS e redirects |
+| `API_BASE_URL` | `https://trainvy-api.vercel.app` | URL física da API (OpenAPI/Swagger) |
+| `AUTH_BASE_URL` | `https://trainvy-web.vercel.app/backend/api/auth` | URL pública de autenticação e OAuth callbacks |
+| `WEB_APP_BASE_URL` | `https://trainvy-web.vercel.app` | Frontend base para CORS e redirects |
 | `AUTH_COOKIE_DOMAIN` | `(vazio)` | Host-only cookies para o frontend |
 | `GOOGLE_CLIENT_ID` | `...` | Credenciais Google OAuth |
 | `GOOGLE_CLIENT_SECRET` | `...` | Credenciais Google OAuth |
