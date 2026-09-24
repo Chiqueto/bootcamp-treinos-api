@@ -17,12 +17,18 @@ describe("Test Infrastructure Smoke Test", () => {
     createdUserIds.length = 0;
   });
 
-  it("should connect exclusively to the dedicated test database (neondb_test)", async () => {
+  it("should connect exclusively to the dedicated test database (TEST_DATABASE_URL)", async () => {
+    const { getDatabaseUrl } = await import("../src/lib/db.js");
+    const { env } = await import("../src/lib/env.js");
+
+    expect(getDatabaseUrl()).toBe(env.TEST_DATABASE_URL);
+    expect(getDatabaseUrl()).not.toBe(env.DATABASE_URL);
+
     const result = await prisma.$queryRaw<Array<{ current_database: string }>>`
       SELECT current_database();
     `;
 
-    expect(result[0]?.current_database).toBe("neondb_test");
+    expect(result[0]?.current_database).toBeDefined();
   });
 
   it("should connect to the test database and perform basic queries", async () => {
