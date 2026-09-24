@@ -7,6 +7,7 @@ const envSchema = z.object({
   DATABASE_URL: z.string().startsWith("postgresql://"),
   BETTER_AUTH_SECRET: z.string(),
   API_BASE_URL: z.url().default("http://localhost:8080"),
+  AUTH_BASE_URL: z.url().optional(),
   GOOGLE_CLIENT_ID: z.string(),
   GOOGLE_CLIENT_SECRET: z.string(),
   GOOGLE_GENERATIVE_AI_API_KEY: z.string(),

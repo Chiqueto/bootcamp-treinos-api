@@ -63,8 +63,24 @@ export const trustedOrigins = resolveTrustedOrigins(
 
 export const authCookieConfig = resolveAuthCookieConfig(env.AUTH_COOKIE_DOMAIN);
 
+export function resolveAuthBaseUrl(
+  apiBaseUrl: string,
+  authBaseUrl?: string
+): string {
+  if (authBaseUrl?.trim()) {
+    return authBaseUrl.trim().replace(/\/+$/, "");
+  }
+  const cleanApi = apiBaseUrl.trim().replace(/\/+$/, "");
+  return cleanApi.endsWith("/api/auth") ? cleanApi : `${cleanApi}/api/auth`;
+}
+
+export const authBaseUrl = resolveAuthBaseUrl(
+  env.API_BASE_URL,
+  env.AUTH_BASE_URL
+);
+
 export const auth = betterAuth({
-  baseURL: env.API_BASE_URL,
+  baseURL: authBaseUrl,
   trustedOrigins,
 
   socialProviders: {

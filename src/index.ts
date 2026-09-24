@@ -12,7 +12,7 @@ import {
 } from "fastify-type-provider-zod";
 import z from "zod";
 
-import { auth, trustedOrigins } from "./lib/auth.js";
+import { auth, authBaseUrl, trustedOrigins } from "./lib/auth.js";
 import { env } from "./lib/env.js";
 import { aiRoutes } from "./routes/ai.js";
 import { homeRoutes } from "./routes/home.js";
@@ -129,12 +129,9 @@ app.route({
   url: "/api/auth/*",
   async handler(request, reply) {
     try {
-      // Construct request URL
-      const protocol =
-        (request.headers["x-forwarded-proto"] as string) ||
-        request.protocol ||
-        "http";
-      const url = new URL(request.url, `${protocol}://${request.headers.host}`);
+      // Build Fetch API Request without insecure host inference
+      const subPath = request.url.replace(/^\/api\/auth/, "");
+      const targetUrl = new URL(`${authBaseUrl}${subPath}`);
 
       // Convert Fastify headers to standard Headers object
       const headers = new Headers();
@@ -142,7 +139,7 @@ app.route({
         if (value) headers.append(key, value.toString());
       });
       // Create Fetch API-compatible request
-      const req = new Request(url.toString(), {
+      const req = new Request(targetUrl.toString(), {
         method: request.method,
         headers,
         ...(request.body ? { body: JSON.stringify(request.body) } : {}),
@@ -151,7 +148,20 @@ app.route({
       const response = await auth.handler(req);
       // Forward response to client
       reply.status(response.status);
-      response.headers.forEach((value, key) => reply.header(key, value));
+
+      // Forward headers, preserving multiple Set-Cookie headers
+      if (typeof response.headers.getSetCookie === "function") {
+        const setCookies = response.headers.getSetCookie();
+        if (setCookies.length > 0) {
+          reply.header("set-cookie", setCookies);
+        }
+      }
+      response.headers.forEach((value, key) => {
+        if (key.toLowerCase() !== "set-cookie") {
+          reply.header(key, value);
+        }
+      });
+
       reply.send(response.body ? await response.text() : null);
     } catch (error) {
       app.log.error(error);

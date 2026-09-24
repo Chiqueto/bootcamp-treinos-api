@@ -45,6 +45,13 @@ Fluxos atuais:
 - perfil;
 - chat Coach AI.
 
+Comunicação Frontend ↔ Backend:
+
+- **APIs comuns de domínio:** client gerado pelo Orval (`app/_lib/api/fetch-generated/index.ts`);
+- **`/ai`:** Vercel AI SDK através de `DefaultChatTransport` no chat (`app/_components/chat.tsx`);
+- **`/api/auth/*`:** Better Auth Client (`app/_lib/auth-client.ts`);
+- O mutator do Orval continua centralizado em `app/_lib/fetch.ts`, responsável por injetar cookies de autenticação do Next.js Server Components.
+
 ## Estado ATUAL — Backend
 
 Repo: `Chiqueto/bootcamp-treinos-api`
