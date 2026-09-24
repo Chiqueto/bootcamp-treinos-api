@@ -25,7 +25,7 @@ export class UpdateWorkoutSession {
       throw new NotFoundError("Workout plan not found");
     }
 
-    const workoutDay = await prisma.workoutDay.findUnique({
+    const workoutDay = await prisma.workoutDay.findFirst({
       where: { id: dto.workoutDayId, workoutPlanId: dto.workoutPlanId },
     });
 
@@ -33,7 +33,7 @@ export class UpdateWorkoutSession {
       throw new NotFoundError("Workout day not found");
     }
 
-    const workoutSession = await prisma.workoutSession.findUnique({
+    const workoutSession = await prisma.workoutSession.findFirst({
       where: { id: dto.sessionId, workoutDayId: dto.workoutDayId },
     });
 

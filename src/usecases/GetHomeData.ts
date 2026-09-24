@@ -2,32 +2,15 @@ import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc.js";
 
 import { NotFoundError } from "../errors/index.js";
-import { WeekDay } from "../generated/prisma/enums.js";
 import { prisma } from "../lib/db.js";
+import {
+  calculateWorkoutStreak,
+  WEEKDAY_MAP,
+  WeekDayValue,
+} from "../lib/streak.js";
 
 dayjs.extend(utc);
 
-type WeekDayValue = (typeof WeekDay)[keyof typeof WeekDay];
-
-const WEEKDAY_MAP: Record<number, WeekDayValue> = {
-  0: WeekDay.SUNDAY,
-  1: WeekDay.MONDAY,
-  2: WeekDay.TUESDAY,
-  3: WeekDay.WEDNESDAY,
-  4: WeekDay.THURSDAY,
-  5: WeekDay.FRIDAY,
-  6: WeekDay.SATURDAY,
-};
-
-const WEEKDAY_ORDER: Record<string, number> = {
-  [WeekDay.SUNDAY]: 0,
-  [WeekDay.MONDAY]: 1,
-  [WeekDay.TUESDAY]: 2,
-  [WeekDay.WEDNESDAY]: 3,
-  [WeekDay.THURSDAY]: 4,
-  [WeekDay.FRIDAY]: 5,
-  [WeekDay.SATURDAY]: 6,
-};
 
 interface InputDto {
   userId: string;
@@ -143,11 +126,11 @@ export class GetHomeData {
     }
 
     // Calculate workout streak
-    const workoutStreak = this.calculateStreak(
-      activeWorkoutPlan.workoutDays,
+    const workoutStreak = calculateWorkoutStreak({
+      workoutDays: activeWorkoutPlan.workoutDays,
       currentDate,
-      dto.timezoneOffset,
-    );
+      timezoneOffset: dto.timezoneOffset,
+    });
 
     return {
       activeWorkoutPlanId: activeWorkoutPlan.id,
@@ -168,64 +151,5 @@ export class GetHomeData {
       workoutStreak,
       consistencyByDay,
     };
-  }
-
-  private calculateStreak(
-    workoutDays: Array<{
-      weekDay: string;
-      isRest: boolean;
-      sessions: Array<{ completedAt: Date | null; startedAt: Date }>;
-    }>,
-    currentDate: dayjs.Dayjs,
-    timezoneOffset: number,
-  ): number {
-    // Sort workout days by weekday order
-    const sortedDays = [...workoutDays].sort(
-      (a, b) => WEEKDAY_ORDER[a.weekDay] - WEEKDAY_ORDER[b.weekDay],
-    );
-
-    let streak = 0;
-    const today = currentDate.format("YYYY-MM-DD");
-
-    // Go backwards from today checking consecutive workout plan days
-    for (let daysBack = 0; daysBack < 30; daysBack++) {
-      const checkDate = currentDate.subtract(daysBack, "day");
-      const checkDateStr = checkDate.format("YYYY-MM-DD");
-      const checkWeekDay = WEEKDAY_MAP[checkDate.day()];
-
-      const workoutDay = sortedDays.find((d) => d.weekDay === checkWeekDay);
-
-      // If no workout day is scheduled for this day, skip it (not part of the plan)
-      if (!workoutDay) {
-        continue;
-      }
-
-      // Rest days count as completed automatically
-      // if (workoutDay.isRest) {
-      //   streak++;
-      //   continue;
-      // }
-
-      // Check if the workout day has a completed session on this date
-      const hasCompletedSession = workoutDay.sessions.some((session) => {
-        const sessionDate = dayjs
-          .utc(session.startedAt)
-          .utcOffset(timezoneOffset)
-          .format("YYYY-MM-DD");
-        return sessionDate === checkDateStr && session.completedAt !== null;
-      });
-
-      if (hasCompletedSession) {
-        streak++;
-      } else {
-        // If today and not completed yet, skip (don't break streak for today)
-        if (checkDateStr === today) {
-          continue;
-        }
-        break;
-      }
-    }
-
-    return streak;
   }
 }

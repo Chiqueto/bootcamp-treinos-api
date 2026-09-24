@@ -2,15 +2,16 @@
 
 # Roadmap
 
-## Fase 0 — Correções estruturais
+## Fase 0 — Correções estruturais [CONCLUÍDA]
 
-- corrigir plano ativo por `userId`;
-- permitir sessões recorrentes;
-- alinhar schema de descanso;
-- parametrizar cookie/domain;
-- testes básicos de ownership.
+- [x] Task 0.1: infraestrutura de testes (Vitest + Neon isolado via TEST_DATABASE_URL e guarda de segurança);
+- [x] Task 0.2: corrigir ownership de plano ativo por `userId` em `CreateWorkoutPlan`;
+- [x] Task 0.3: permitir sessões recorrentes (`WorkoutSession`) com concorrência de 1 sessão ativa por usuário;
+- [x] Task 0.4: alinhar invariantes de descanso no `WorkoutDaySchema` e unificar cálculo de streak;
+- [x] Task 0.5: parametrizar cookie/domain (`AUTH_COOKIE_DOMAIN`), remover Render e sincronizar CORS/trustedOrigins;
+- [x] Task 0.6: auditoria completa, validação de invariantes e encerramento da Fase 0.
 
-**Saída:** dois usuários usam o sistema sem interferência.
+**Saída alcançada:** Dois usuários utilizam o sistema com isolamento completo e sem qualquer interferência mútua. Base homologada e pronta para a Fase 1.
 
 ## Fase 1 — Tracker real
 

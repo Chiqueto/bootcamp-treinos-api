@@ -30,7 +30,7 @@ export class StartWorkoutSession {
       throw new WorkoutPlanNotActiveError("Workout plan is not active");
     }
 
-    const workoutDay = await prisma.workoutDay.findUnique({
+    const workoutDay = await prisma.workoutDay.findFirst({
       where: { id: dto.workoutDayId, workoutPlanId: dto.workoutPlanId },
     });
 
@@ -38,15 +38,19 @@ export class StartWorkoutSession {
       throw new NotFoundError("Workout day not found");
     }
 
-    const existingSession = await prisma.workoutSession.findFirst({
+    const activeSession = await prisma.workoutSession.findFirst({
       where: {
-        workoutDayId: dto.workoutDayId,
-        startedAt: { not: undefined },
+        completedAt: null,
+        workoutDay: {
+          workoutPlan: {
+            userId: dto.userId,
+          },
+        },
       },
     });
 
-    if (existingSession) {
-      throw new ConflictError("Workout session already started for this day");
+    if (activeSession) {
+      throw new ConflictError("There is already a workout session in progress");
     }
 
     const session = await prisma.workoutSession.create({

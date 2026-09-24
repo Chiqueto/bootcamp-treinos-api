@@ -12,7 +12,7 @@ import {
 } from "fastify-type-provider-zod";
 import z from "zod";
 
-import { auth } from "./lib/auth.js";
+import { auth, trustedOrigins } from "./lib/auth.js";
 import { env } from "./lib/env.js";
 import { aiRoutes } from "./routes/ai.js";
 import { homeRoutes } from "./routes/home.js";
@@ -63,7 +63,7 @@ await app.register(fastifySwagger, {
 });
 
 await app.register(fastifyCors, {
-  origin: [env.WEB_APP_BASE_URL],
+  origin: trustedOrigins,
   credentials: true,
 });
 
@@ -130,7 +130,11 @@ app.route({
   async handler(request, reply) {
     try {
       // Construct request URL
-      const url = new URL(request.url, `http://${request.headers.host}`);
+      const protocol =
+        (request.headers["x-forwarded-proto"] as string) ||
+        request.protocol ||
+        "http";
+      const url = new URL(request.url, `${protocol}://${request.headers.host}`);
 
       // Convert Fastify headers to standard Headers object
       const headers = new Headers();

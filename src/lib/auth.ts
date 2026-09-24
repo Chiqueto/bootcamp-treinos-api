@@ -5,9 +5,67 @@ import { openAPI } from "better-auth/plugins";
 import { prisma } from "./db.js";
 import { env } from "./env.js";
 
+export interface AuthCookieConfig {
+  enabled: boolean;
+  domain?: string;
+}
+
+export function resolveAuthCookieConfig(
+  authCookieDomain?: string
+): AuthCookieConfig {
+  const domain = authCookieDomain?.trim();
+  if (!domain) {
+    return {
+      enabled: false,
+    };
+  }
+
+  return {
+    enabled: true,
+    domain,
+  };
+}
+
+export function resolveTrustedOrigins(
+  webAppBaseUrl: string,
+  additionalOrigins?: string | string[]
+): string[] {
+  const origins = new Set<string>();
+
+  const addOrigin = (raw: string) => {
+    const trimmed = raw.trim();
+    if (!trimmed) return;
+    try {
+      origins.add(new URL(trimmed).origin);
+    } catch {
+      origins.add(trimmed);
+    }
+  };
+
+  addOrigin(webAppBaseUrl);
+
+  if (additionalOrigins) {
+    const list = Array.isArray(additionalOrigins)
+      ? additionalOrigins
+      : additionalOrigins.split(",");
+    for (const item of list) {
+      addOrigin(item);
+    }
+  }
+
+  return Array.from(origins);
+}
+
+export const trustedOrigins = resolveTrustedOrigins(
+  env.WEB_APP_BASE_URL,
+  env.ADDITIONAL_TRUSTED_ORIGINS
+);
+
+export const authCookieConfig = resolveAuthCookieConfig(env.AUTH_COOKIE_DOMAIN);
+
 export const auth = betterAuth({
   baseURL: env.API_BASE_URL,
-  trustedOrigins: [env.WEB_APP_BASE_URL],
+  trustedOrigins,
 
   socialProviders: {
     google: {
@@ -20,9 +78,6 @@ export const auth = betterAuth({
   }),
   plugins: [openAPI()],
   advanced: {
-    crossSubDomainCookies: {
-      enabled: true,
-      domain: env.NODE_ENV === "production" ? ".onrender.com" : undefined,
-    },
+    crossSubDomainCookies: authCookieConfig,
   },
 });

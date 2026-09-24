@@ -54,15 +54,14 @@ Zod + OpenAPI continuam sendo contrato. Frontend regenera Orval após mudanças 
 
 ## Auth
 
-Atual: Better Auth + Google.
+Atual: Better Auth + Google OAuth.
 
-Antes de produção:
+Status da Fase 0 (concluído):
 
-- remover `.onrender.com` hardcoded;
-- parametrizar domínio;
-- revisar `trustedOrigins`;
-- testar cookies cross-domain;
-- testar preview e produção.
+- `.onrender.com` hardcoded removido;
+- domínio parametrizado via `AUTH_COOKIE_DOMAIN` (host-only por padrão);
+- `trustedOrigins` unificado e sincronizado com o CORS do Fastify;
+- suporte a protocolo HTTPS atrás de proxies reversos (`x-forwarded-proto`).
 
 ## Banco
 

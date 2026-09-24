@@ -7,27 +7,63 @@ export const ErrorSchema = z.object({
   code: z.string(),
 });
 
+export const WorkoutExerciseSchema = z.object({
+  order: z.number().min(0),
+  name: z.string().trim().min(1),
+  sets: z.number().min(1),
+  reps: z.number().min(1),
+  restTimeInSeconds: z.number().min(1),
+});
+
+export const WorkoutDaySchema = z
+  .object({
+    name: z.string().trim().min(1),
+    weekDay: z.enum(WeekDay),
+    isRest: z.boolean().default(false),
+    estimatedDurationInSeconds: z.number().min(0),
+    coverImageUrl: z.url().nullable().optional(),
+    exercises: z.array(WorkoutExerciseSchema),
+  })
+  .superRefine((data, ctx) => {
+    if (data.isRest) {
+      if (data.estimatedDurationInSeconds !== 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            "Dias de descanso devem ter estimatedDurationInSeconds igual a 0",
+          path: ["estimatedDurationInSeconds"],
+        });
+      }
+      if (data.exercises.length > 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Dias de descanso não devem conter exercícios",
+          path: ["exercises"],
+        });
+      }
+    } else {
+      if (data.estimatedDurationInSeconds <= 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            "Dias de treino devem ter estimatedDurationInSeconds maior que 0",
+          path: ["estimatedDurationInSeconds"],
+        });
+      }
+      if (data.exercises.length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Dias de treino devem conter pelo menos um exercício",
+          path: ["exercises"],
+        });
+      }
+    }
+  });
+
 export const WorkoutPlanSchema = z.object({
   id: z.uuid(),
   name: z.string().trim().min(1),
-  workoutDays: z.array(
-    z.object({
-      name: z.string().trim().min(1),
-      weekDay: z.enum(WeekDay),
-      isRest: z.boolean().default(false),
-      estimatedDurationInSeconds: z.number().min(1),
-      coverImageUrl: z.url().nullable().optional(),
-      exercises: z.array(
-        z.object({
-          order: z.number().min(0),
-          name: z.string().trim().min(1),
-          sets: z.number().min(1),
-          reps: z.number().min(1),
-          restTimeInSeconds: z.number().min(1),
-        }),
-      ),
-    }),
-  ),
+  workoutDays: z.array(WorkoutDaySchema),
 });
 
 export const StartWorkoutSessionParamsSchema = z.object({

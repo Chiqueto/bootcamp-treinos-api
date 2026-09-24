@@ -16,6 +16,8 @@ const envSchema = z.object({
     .enum(["development", "production", "test"])
     .default("development"),
   TEST_DATABASE_URL: z.string().startsWith("postgresql://").optional(),
+  AUTH_COOKIE_DOMAIN: z.string().optional(),
+  ADDITIONAL_TRUSTED_ORIGINS: z.string().optional(),
 });
 
 export const env = envSchema.parse(process.env);

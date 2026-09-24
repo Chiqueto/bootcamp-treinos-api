@@ -4,7 +4,7 @@
   "description": "",
   "scripts": {
     "dev": "tsx --watch src/index.ts .env",
-    "build": "pnpm exec prisma generate && tsc",
+    "build": "prisma generate && tsc",
     "test": "vitest run",
     "test:watch": "vitest"
   },

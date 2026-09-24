@@ -1,22 +1,10 @@
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc.js";
 
-import { WeekDay } from "../generated/prisma/enums.js";
 import { prisma } from "../lib/db.js";
+import { calculateWorkoutStreak } from "../lib/streak.js";
 
 dayjs.extend(utc);
-
-type WeekDayValue = (typeof WeekDay)[keyof typeof WeekDay];
-
-const WEEKDAY_MAP: Record<number, WeekDayValue> = {
-  0: WeekDay.SUNDAY,
-  1: WeekDay.MONDAY,
-  2: WeekDay.TUESDAY,
-  3: WeekDay.WEDNESDAY,
-  4: WeekDay.THURSDAY,
-  5: WeekDay.FRIDAY,
-  6: WeekDay.SATURDAY,
-};
 
 interface InputDto {
   userId: string;
@@ -118,30 +106,9 @@ export class GetStats {
       }, 0);
 
     // workoutStreak
-    const workoutStreak = await this.calculateStreak(
-      dto.userId,
-      toDate,
-      dto.timezoneOffset,
-    );
-
-    return {
-      workoutStreak,
-      consistencyByDay,
-      completedWorkoutsCount,
-      conclusionRate,
-      totalTimeInSeconds,
-    };
-  }
-
-  private async calculateStreak(
-    userId: string,
-    endDate: dayjs.Dayjs,
-    timezoneOffset: number,
-  ): Promise<number> {
-    // Get the active workout plan to know which weekdays are scheduled
     const activeWorkoutPlan = await prisma.workoutPlan.findFirst({
       where: {
-        userId,
+        userId: dto.userId,
         isActive: true,
       },
       include: {
@@ -153,53 +120,20 @@ export class GetStats {
       },
     });
 
-    if (!activeWorkoutPlan) {
-      return 0;
-    }
+    const workoutStreak = activeWorkoutPlan
+      ? calculateWorkoutStreak({
+          workoutDays: activeWorkoutPlan.workoutDays,
+          currentDate: toDate,
+          timezoneOffset: dto.timezoneOffset,
+        })
+      : 0;
 
-    const today = endDate.format("YYYY-MM-DD");
-    let streak = 0;
-
-    for (let daysBack = 0; daysBack < 365; daysBack++) {
-      const checkDate = endDate.subtract(daysBack, "day");
-      const checkDateStr = checkDate.format("YYYY-MM-DD");
-      const checkWeekDay = WEEKDAY_MAP[checkDate.day()];
-
-      const workoutDay = activeWorkoutPlan.workoutDays.find(
-        (d) => d.weekDay === checkWeekDay,
-      );
-
-      // If no workout day is scheduled for this day, skip it
-      if (!workoutDay) {
-        continue;
-      }
-
-      // Rest days count as completed automatically
-      if (workoutDay.isRest) {
-        streak++;
-        continue;
-      }
-
-      // Check if the workout day has a completed session on this date
-      const hasCompletedSession = workoutDay.sessions.some((session) => {
-        const sessionDate = dayjs
-          .utc(session.startedAt)
-          .utcOffset(timezoneOffset)
-          .format("YYYY-MM-DD");
-        return sessionDate === checkDateStr && session.completedAt !== null;
-      });
-
-      if (hasCompletedSession) {
-        streak++;
-      } else {
-        // If today and not completed yet, skip (don't break streak for today)
-        if (checkDateStr === today) {
-          continue;
-        }
-        break;
-      }
-    }
-
-    return streak;
+    return {
+      workoutStreak,
+      consistencyByDay,
+      completedWorkoutsCount,
+      conclusionRate,
+      totalTimeInSeconds,
+    };
   }
 }

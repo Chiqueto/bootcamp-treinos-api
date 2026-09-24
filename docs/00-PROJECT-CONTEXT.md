@@ -120,27 +120,27 @@ LLM -> Tool tipada -> Use Case -> Prisma
 
 A metodologia hoje está hardcoded no `SYSTEM_PROMPT`. Na visão ALVO, o conhecimento metodológico específico deve vir das fontes selecionadas, templates e configurações do treinador.
 
-## Bugs/riscos já identificados
+## Bugs e pendências da Fase 0 (RESOLVIDOS)
 
-### BUG-001 — plano ativo sem escopo por usuário
+### BUG-001 — plano ativo sem escopo por usuário [RESOLVIDO na Task 0.2]
 
-`CreateWorkoutPlan` procura `isActive: true` sem `userId`. Um usuário pode desativar o plano ativo de outro.
+`CreateWorkoutPlan` desativa atomicamente apenas os planos do próprio `userId` (`tx.workoutPlan.updateMany({ where: { userId, isActive: true } })`). Planos de outros usuários permanecem intactos.
 
-### BUG-002 — sessão não recorrente
+### BUG-002 — sessão não recorrente [RESOLVIDO na Task 0.3]
 
-`StartWorkoutSession` bloqueia novas sessões após existir qualquer sessão anterior do mesmo `WorkoutDay`. O domínio precisa permitir o mesmo treino em datas diferentes.
+`StartWorkoutSession` permite que o mesmo `WorkoutDay` seja executado repetidas vezes ao longo do tempo. Sessões concluídas ficam registradas no histórico. Apenas sessões em andamento (`completedAt === null`) são limitadas a no máximo 1 simultânea por usuário.
 
-### BUG-003 — dia de descanso inconsistente
+### BUG-003 — dia de descanso inconsistente e streak divergente [RESOLVIDO na Task 0.4]
 
-O prompt admite `estimatedDurationInSeconds = 0`, mas o schema HTTP usa `.min(1)`.
+`WorkoutDaySchema` agora valida invariantes estritas via Zod (`isRest: true` exige duração 0 e exercícios vazios; `isRest: false` exige duração > 0 e exercícios não vazios). A regra de streak foi unificada na função pura `calculateWorkoutStreak`, compartilhada entre `GetHomeData` e `GetStats`.
 
-### TECH-001 — cookie de produção
+### TECH-001 — cookie de produção e Render [RESOLVIDO na Task 0.5]
 
-Better Auth ainda contém domínio `.onrender.com` hardcoded para produção.
+Removido qualquer domínio `.onrender.com` hardcoded. Adicionada parametrização via `AUTH_COOKIE_DOMAIN`. Sem essa variável, cookies são estritamente host-only (`crossSubDomainCookies` desabilitado). Fastify CORS e Better Auth `trustedOrigins` unificados.
 
-### TECH-002 — testes
+### TECH-002 — infraestrutura de testes automatizados [RESOLVIDO na Task 0.1]
 
-Não foi encontrado conjunto de testes automatizados.
+Implementada suíte de testes com Vitest, executando contra banco isolado via `TEST_DATABASE_URL` com guarda estrita impedindo execução contra `DATABASE_URL` principal. Suíte com 41 testes cobrindo ownership, sessões, schemas, streak e auth.
 
 ## Funcionalidades ainda NÃO implementadas
 
