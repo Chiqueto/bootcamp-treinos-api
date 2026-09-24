@@ -15,6 +15,7 @@ const envSchema = z.object({
   NODE_ENV: z
     .enum(["development", "production", "test"])
     .default("development"),
+  TEST_DATABASE_URL: z.string().startsWith("postgresql://").optional(),
 });
 
 export const env = envSchema.parse(process.env);
