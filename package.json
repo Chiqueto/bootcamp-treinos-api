@@ -37,7 +37,7 @@
     "@fastify/swagger": "^9.7.0",
     "@prisma/adapter-pg": "^7.4.0",
     "@prisma/client": "^7.4.0",
-    "@scalar/fastify-api-reference": "^1.44.20",
+    "@scalar/fastify-api-reference": "^1.70.0",
     "ai": "6.0.100",
     "better-auth": "^1.4.18",
     "dayjs": "^1.11.19",
