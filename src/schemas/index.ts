@@ -1,6 +1,6 @@
 import z from "zod";
 
-import { WeekDay } from "../generated/prisma/enums.js";
+import { SetType, WeekDay } from "../generated/prisma/enums.js";
 
 export const ErrorSchema = z.object({
   error: z.string(),
@@ -71,8 +71,20 @@ export const StartWorkoutSessionParamsSchema = z.object({
   workoutDayId: z.uuid(),
 });
 
+export const SessionExerciseResponseSchema = z.object({
+  id: z.uuid(),
+  sourceWorkoutExerciseId: z.uuid().nullable(),
+  exerciseId: z.uuid().nullable(),
+  exerciseNameSnapshot: z.string(),
+  order: z.number(),
+  plannedSets: z.number().nullable(),
+  plannedReps: z.number().nullable(),
+  plannedRestTimeInSeconds: z.number().nullable(),
+});
+
 export const StartWorkoutSessionResponseSchema = z.object({
   userWorkoutSessionId: z.uuid(),
+  exercises: z.array(SessionExerciseResponseSchema).optional(),
 });
 
 export const UpdateWorkoutSessionParamsSchema = z.object({
@@ -259,3 +271,88 @@ export const GetUserTrainDataResponseSchema = z
     bodyFatPercentage: z.number(),
   })
   .nullable();
+
+export const CreateWorkoutSetParamsSchema = z.object({
+  sessionExerciseId: z.uuid(),
+});
+
+export const CreateWorkoutSetBodySchema = z.object({
+  type: z.enum(SetType).optional(),
+  weightInGrams: z.number().int().min(0).nullable().optional(),
+  reps: z.number().int().min(0).nullable().optional(),
+  rir: z.number().int().min(0).max(10).nullable().optional(),
+  durationInSeconds: z.number().int().min(0).nullable().optional(),
+  notes: z.string().max(1000).nullable().optional(),
+  completed: z.boolean().optional(),
+});
+
+export const WorkoutSetResponseSchema = z.object({
+  id: z.uuid(),
+  sessionExerciseId: z.uuid(),
+  order: z.number().int(),
+  type: z.enum(SetType),
+  weightInGrams: z.number().int().nullable(),
+  reps: z.number().int().nullable(),
+  rir: z.number().int().nullable(),
+  durationInSeconds: z.number().int().nullable(),
+  notes: z.string().nullable(),
+  completedAt: z.string().nullable(),
+});
+
+export const UpdateWorkoutSetParamsSchema = z.object({
+  setId: z.uuid(),
+});
+
+export const UpdateWorkoutSetBodySchema = z.object({
+  type: z.enum(SetType).optional(),
+  weightInGrams: z.number().int().min(0).nullable().optional(),
+  reps: z.number().int().min(0).nullable().optional(),
+  rir: z.number().int().min(0).max(10).nullable().optional(),
+  durationInSeconds: z.number().int().min(0).nullable().optional(),
+  notes: z.string().max(1000).nullable().optional(),
+  completed: z.boolean().optional(),
+});
+
+export const DeleteWorkoutSetParamsSchema = z.object({
+  setId: z.uuid(),
+});
+
+export const DeleteWorkoutSetResponseSchema = z.object({
+  success: z.boolean(),
+});
+
+export const GetWorkoutSessionParamsSchema = z.object({
+  sessionId: z.uuid(),
+});
+
+export const WorkoutSessionSetResponseSchema = z.object({
+  id: z.uuid(),
+  order: z.number().int(),
+  type: z.enum(SetType),
+  weightInGrams: z.number().int().nullable(),
+  reps: z.number().int().nullable(),
+  rir: z.number().int().nullable(),
+  durationInSeconds: z.number().int().nullable(),
+  notes: z.string().nullable(),
+  completedAt: z.string().nullable(),
+});
+
+export const WorkoutSessionExerciseResponseSchema = z.object({
+  id: z.uuid(),
+  exerciseNameSnapshot: z.string(),
+  order: z.number().int(),
+  plannedSets: z.number().int().nullable(),
+  plannedReps: z.number().int().nullable(),
+  plannedRestTimeInSeconds: z.number().int().nullable(),
+  notes: z.string().nullable(),
+  sets: z.array(WorkoutSessionSetResponseSchema),
+});
+
+export const GetWorkoutSessionResponseSchema = z.object({
+  id: z.uuid(),
+  workoutDayId: z.uuid(),
+  startedAt: z.string(),
+  completedAt: z.string().nullable(),
+  sessionExercises: z.array(WorkoutSessionExerciseResponseSchema),
+});
+

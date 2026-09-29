@@ -41,11 +41,7 @@ export class GetStats {
     // Fetch all sessions in the range for the user
     const sessions = await prisma.workoutSession.findMany({
       where: {
-        workoutDay: {
-          workoutPlan: {
-            userId: dto.userId,
-          },
-        },
+        athleteId: dto.userId,
         startedAt: {
           gte: fromDate.toDate(),
           lte: toDate.toDate(),

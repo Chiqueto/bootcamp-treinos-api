@@ -84,9 +84,9 @@ export class GetHomeData {
     // Fetch all sessions in the week range
     const sessionsInWeek = await prisma.workoutSession.findMany({
       where: {
+        athleteId: dto.userId,
         workoutDay: {
           workoutPlan: {
-            userId: dto.userId,
             isActive: true,
           },
         },

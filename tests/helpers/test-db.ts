@@ -1,4 +1,4 @@
-import { WeekDay } from "../../src/generated/prisma/enums.js";
+import { SetType, WeekDay } from "../../src/generated/prisma/enums.js";
 import { prisma } from "../../src/lib/db.js";
 
 export async function createTestUser(override?: {
@@ -56,20 +56,135 @@ export async function createTestWorkoutDay(
   });
 }
 
+export async function createTestExercise(override?: {
+  id?: string;
+  name?: string;
+  ownerUserId?: string | null;
+}) {
+  return prisma.exercise.create({
+    data: {
+      id: override?.id ?? crypto.randomUUID(),
+      name: override?.name ?? "Supino Reto",
+      ownerUserId: override?.ownerUserId ?? null,
+    },
+  });
+}
+
+export async function createTestWorkoutExercise(
+  workoutDayId: string,
+  override?: {
+    id?: string;
+    name?: string;
+    order?: number;
+    sets?: number;
+    reps?: number;
+    restTimeInSeconds?: number;
+    exerciseId?: string | null;
+  },
+) {
+  return prisma.workoutExercise.create({
+    data: {
+      id: override?.id ?? crypto.randomUUID(),
+      workoutDayId,
+      name: override?.name ?? "Exercício Teste",
+      order: override?.order ?? 0,
+      sets: override?.sets ?? 3,
+      reps: override?.reps ?? 10,
+      restTimeInSeconds: override?.restTimeInSeconds ?? 60,
+      exerciseId: override?.exerciseId ?? null,
+    },
+  });
+}
+
 export async function createTestWorkoutSession(
   workoutDayId: string,
   override?: {
     id?: string;
+    athleteId?: string;
     startedAt?: Date;
     completedAt?: Date | null;
   },
 ) {
+  let athleteId = override?.athleteId;
+  if (!athleteId) {
+    const day = await prisma.workoutDay.findUnique({
+      where: { id: workoutDayId },
+      include: { workoutPlan: true },
+    });
+    athleteId = day?.workoutPlan.userId;
+  }
+
+  if (!athleteId) {
+    throw new Error(
+      `Não foi possível determinar athleteId para o workoutDayId: ${workoutDayId}`
+    );
+  }
+
   return prisma.workoutSession.create({
     data: {
       id: override?.id ?? crypto.randomUUID(),
       workoutDayId,
+      athleteId,
       startedAt: override?.startedAt ?? new Date(),
       completedAt: override?.completedAt !== undefined ? override.completedAt : null,
+    },
+  });
+}
+
+export async function createTestSessionExercise(
+  workoutSessionId: string,
+  override?: {
+    id?: string;
+    exerciseNameSnapshot?: string;
+    order?: number;
+    plannedSets?: number | null;
+    plannedReps?: number | null;
+    plannedRestTimeInSeconds?: number | null;
+    exerciseId?: string | null;
+    notes?: string | null;
+  },
+) {
+  return prisma.sessionExercise.create({
+    data: {
+      id: override?.id ?? crypto.randomUUID(),
+      workoutSessionId,
+      exerciseNameSnapshot: override?.exerciseNameSnapshot ?? "Supino Reto",
+      order: override?.order ?? 1,
+      plannedSets: override?.plannedSets ?? 3,
+      plannedReps: override?.plannedReps ?? 10,
+      plannedRestTimeInSeconds: override?.plannedRestTimeInSeconds ?? 60,
+      exerciseId: override?.exerciseId ?? null,
+      notes: override?.notes ?? null,
+    },
+  });
+}
+
+export async function createTestWorkoutSet(
+  sessionExerciseId: string,
+  override?: {
+    id?: string;
+    order?: number;
+    type?: SetType;
+    weightInGrams?: number | null;
+    reps?: number | null;
+    rir?: number | null;
+    durationInSeconds?: number | null;
+    notes?: string | null;
+    completedAt?: Date | null;
+  },
+) {
+  return prisma.workoutSet.create({
+    data: {
+      id: override?.id ?? crypto.randomUUID(),
+      sessionExerciseId,
+      order: override?.order ?? 1,
+      type: override?.type ?? SetType.WORKING,
+      weightInGrams: override?.weightInGrams ?? null,
+      reps: override?.reps ?? null,
+      rir: override?.rir ?? null,
+      durationInSeconds: override?.durationInSeconds ?? null,
+      notes: override?.notes ?? null,
+      completedAt: override?.completedAt ?? null,
     },
   });
 }
@@ -95,7 +210,9 @@ export async function cleanupTestUsers(userIds: string[]) {
     if (dayIds.length > 0) {
       // 3. Delete sessions and exercises
       await prisma.workoutSession.deleteMany({
-        where: { workoutDayId: { in: dayIds } },
+        where: {
+          OR: [{ workoutDayId: { in: dayIds } }, { athleteId: { in: userIds } }],
+        },
       });
       await prisma.workoutExercise.deleteMany({
         where: { workoutDayId: { in: dayIds } },
@@ -112,7 +229,12 @@ export async function cleanupTestUsers(userIds: string[]) {
     });
   }
 
-  // 6. Delete users
+  // 6. Delete custom exercises
+  await prisma.exercise.deleteMany({
+    where: { ownerUserId: { in: userIds } },
+  });
+
+  // 7. Delete users
   await prisma.user.deleteMany({
     where: { id: { in: userIds } },
   });

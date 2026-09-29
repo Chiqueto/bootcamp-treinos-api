@@ -34,7 +34,11 @@ export class UpdateWorkoutSession {
     }
 
     const workoutSession = await prisma.workoutSession.findFirst({
-      where: { id: dto.sessionId, workoutDayId: dto.workoutDayId },
+      where: {
+        id: dto.sessionId,
+        workoutDayId: dto.workoutDayId,
+        athleteId: dto.userId,
+      },
     });
 
     if (!workoutSession) {

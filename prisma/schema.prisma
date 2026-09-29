@@ -23,21 +23,28 @@ enum WeekDay {
   SUNDAY
 }
 
+enum SetType {
+  WARMUP
+  WORKING
+}
+
 model User {
-  id                  String        @id
+  id                  String           @id
   workoutPlans        WorkoutPlan[]
   name                String
   email               String
-  emailVerified       Boolean       @default(false)
+  emailVerified       Boolean          @default(false)
   image               String?
-  createdAt           DateTime      @default(now())
-  updatedAt           DateTime      @updatedAt
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
   sessions            Session[]
   accounts            Account[]
   weightInGrams       Int?
   heightInCentimeters Int?
   age                 Int?
   bodyFatPercentage   Int? // 100 representa 100%
+  createdExercises    Exercise[]
+  workoutSessions     WorkoutSession[]
 
   @@unique([email])
   @@map("user")
@@ -70,6 +77,20 @@ model WorkoutDay {
   sessions                   WorkoutSession[]
 }
 
+model Exercise {
+  id          String   @id @default(uuid())
+  ownerUserId String?
+  ownerUser   User?    @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  name        String
+  createdAt   DateTime @default(now()) @db.Timestamptz()
+  updatedAt   DateTime @updatedAt @db.Timestamptz()
+
+  workoutExercises WorkoutExercise[]
+  sessionExercises SessionExercise[]
+
+  @@index([ownerUserId, name])
+}
+
 model WorkoutExercise {
   id                String     @id @default(uuid())
   name              String
@@ -81,16 +102,79 @@ model WorkoutExercise {
   restTimeInSeconds Int
   createdAt         DateTime   @default(now()) @db.Timestamptz()
   updatedAt         DateTime   @updatedAt @db.Timestamptz()
+
+  exerciseId       String?
+  exercise         Exercise?         @relation(fields: [exerciseId], references: [id], onDelete: SetNull)
+  sessionExercises SessionExercise[]
+
+  @@index([exerciseId])
 }
 
 model WorkoutSession {
   id           String     @id @default(uuid())
   workoutDayId String
   workoutDay   WorkoutDay @relation(fields: [workoutDayId], references: [id])
+  athleteId    String
+  athlete      User       @relation(fields: [athleteId], references: [id], onDelete: Cascade)
   startedAt    DateTime   @db.Timestamptz()
   completedAt  DateTime?  @db.Timestamptz()
   createdAt    DateTime   @default(now()) @db.Timestamptz()
   updatedAt    DateTime   @updatedAt @db.Timestamptz()
+
+  sessionExercises SessionExercise[]
+
+  @@index([athleteId, startedAt])
+  @@index([athleteId, completedAt])
+}
+
+model SessionExercise {
+  id                      String           @id @default(uuid())
+  workoutSessionId        String
+  workoutSession          WorkoutSession   @relation(fields: [workoutSessionId], references: [id], onDelete: Cascade)
+
+  sourceWorkoutExerciseId String?
+  sourceWorkoutExercise   WorkoutExercise? @relation(fields: [sourceWorkoutExerciseId], references: [id], onDelete: SetNull)
+
+  exerciseId              String?
+  exercise                Exercise?        @relation(fields: [exerciseId], references: [id], onDelete: SetNull)
+
+  exerciseNameSnapshot    String
+  order                   Int
+
+  plannedSets              Int?
+  plannedReps              Int?
+  plannedRestTimeInSeconds Int?
+
+  notes                   String?
+  createdAt               DateTime         @default(now()) @db.Timestamptz()
+  updatedAt               DateTime         @updatedAt @db.Timestamptz()
+
+  sets                    WorkoutSet[]
+
+  @@index([workoutSessionId, order])
+  @@index([exerciseId])
+}
+
+model WorkoutSet {
+  id                String          @id @default(uuid())
+  sessionExerciseId String
+  sessionExercise   SessionExercise @relation(fields: [sessionExerciseId], references: [id], onDelete: Cascade)
+
+  order             Int
+  type              SetType         @default(WORKING)
+
+  weightInGrams     Int?
+  reps              Int?
+  rir               Int?
+  durationInSeconds Int?
+
+  notes             String?
+  completedAt       DateTime?       @db.Timestamptz()
+
+  createdAt         DateTime        @default(now()) @db.Timestamptz()
+  updatedAt         DateTime        @updatedAt @db.Timestamptz()
+
+  @@index([sessionExerciseId, order])
 }
 
 model Session {

@@ -19,6 +19,7 @@ import { homeRoutes } from "./routes/home.js";
 import { meRoutes } from "./routes/me.js";
 import { statsRoutes } from "./routes/stats.js";
 import { WorkoutPlanRoutes } from "./routes/workout-plan.js";
+import { workoutSessionRoutes } from "./routes/workout-session.js";
 
 const isVercel = Boolean(process.env.VERCEL);
 
@@ -94,6 +95,7 @@ await app.register(homeRoutes, { prefix: "/home" });
 await app.register(statsRoutes, { prefix: "/stats" });
 await app.register(meRoutes, { prefix: "/me" });
 await app.register(aiRoutes, { prefix: "/ai" });
+await app.register(workoutSessionRoutes);
 
 app.withTypeProvider<ZodTypeProvider>().route({
   method: "GET",
@@ -187,7 +189,11 @@ if (!isVercel) {
   }
 }
 
-export default async function handler(req: any, res: any) {
+export default async function handler(
+  req: import("node:http").IncomingMessage,
+  res: import("node:http").ServerResponse,
+) {
   await app.ready();
   app.server.emit("request", req, res);
 }
+
