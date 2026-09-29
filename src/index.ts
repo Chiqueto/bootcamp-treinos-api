@@ -20,16 +20,20 @@ import { meRoutes } from "./routes/me.js";
 import { statsRoutes } from "./routes/stats.js";
 import { WorkoutPlanRoutes } from "./routes/workout-plan.js";
 
+const isVercel = Boolean(process.env.VERCEL);
+
 const envToLogger = {
-  development: {
-    transport: {
-      target: "pino-pretty",
-      options: {
-        translateTime: "HH:MM:ss Z",
-        ignore: "pid,hostname",
+  development: isVercel
+    ? true
+    : {
+        transport: {
+          target: "pino-pretty",
+          options: {
+            translateTime: "HH:MM:ss Z",
+            ignore: "pid,hostname",
+          },
+        },
       },
-    },
-  },
   production: true,
   test: false,
 };
@@ -173,9 +177,16 @@ app.route({
   },
 });
 
-try {
-  await app.listen({ host: "0.0.0.0", port: Number(env.PORT) || 8080 });
-} catch (err) {
-  app.log.error(err);
-  process.exit(1);
+if (!isVercel) {
+  try {
+    await app.listen({ host: "0.0.0.0", port: Number(env.PORT) || 8080 });
+  } catch (err) {
+    app.log.error(err);
+    process.exit(1);
+  }
+}
+
+export default async function handler(req: any, res: any) {
+  await app.ready();
+  app.server.emit("request", req, res);
 }
