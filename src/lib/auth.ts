@@ -101,3 +101,11 @@ export const auth = betterAuth({
     crossSubDomainCookies: authCookieConfig,
   },
 });
+
+console.log("[AUTH CONFIG] Inicializado com:", {
+  authBaseUrl,
+  trustedOrigins,
+  googleClientIdConfigured: Boolean(env.GOOGLE_CLIENT_ID),
+  googleClientSecretConfigured: Boolean(env.GOOGLE_CLIENT_SECRET),
+  cookieDomain: authCookieConfig.domain || "(host-only)",
+});

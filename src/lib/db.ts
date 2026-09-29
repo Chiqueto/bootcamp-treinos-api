@@ -39,6 +39,9 @@ export function getDatabaseUrl(): string {
 
 const connectionString = getDatabaseUrl();
 
+const maskedUrl = connectionString.replace(/:([^:@]+)@/, ":****@");
+console.log(`[DATABASE CONFIG] Prisma connection string: ${maskedUrl}`);
+
 const adapter = new PrismaPg({
   connectionString,
 });

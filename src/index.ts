@@ -137,6 +137,12 @@ app.route({
       const subPath = request.url.replace(/^\/api\/auth/, "");
       const targetUrl = new URL(`${authBaseUrl}${subPath}`);
 
+      console.log(
+        `[AUTH BACKEND] -> ${request.method} ${request.url} | Origin: ${
+          request.headers.origin || "(none)"
+        } | Target: ${targetUrl.toString()}`
+      );
+
       // Convert Fastify headers to standard Headers object
       const headers = new Headers();
       Object.entries(request.headers).forEach(([key, value]) => {
@@ -166,8 +172,19 @@ app.route({
         }
       });
 
-      reply.send(response.body ? await response.text() : null);
+      const responseBody = response.body ? await response.text() : null;
+      console.log(
+        `[AUTH BACKEND] <- Status: ${response.status} | Body: ${
+          responseBody || "(null)"
+        }`
+      );
+
+      reply.send(responseBody);
     } catch (error) {
+      console.error(
+        "[AUTH BACKEND EXCEPTION] Erro no processamento de /api/auth/*:",
+        error
+      );
       app.log.error(error);
       reply.status(500).send({
         error: "Internal authentication error",
