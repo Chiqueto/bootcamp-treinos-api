@@ -93,6 +93,10 @@ export const auth = betterAuth({
     provider: "postgresql",
   }),
   plugins: [openAPI()],
+  rateLimit: {
+    window: 60,
+    max: 100,
+  },
   advanced: {
     crossSubDomainCookies: authCookieConfig,
   },
