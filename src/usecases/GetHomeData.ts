@@ -81,15 +81,20 @@ export class GetHomeData {
       .endOf("day")
       .subtract(dto.timezoneOffset, "minute");
 
-    // Fetch all sessions in the week range
+    // Fetch all sessions in the week range (both planned from active plan and free workouts)
     const sessionsInWeek = await prisma.workoutSession.findMany({
       where: {
         athleteId: dto.userId,
-        workoutDay: {
-          workoutPlan: {
-            isActive: true,
+        OR: [
+          { workoutDayId: null },
+          {
+            workoutDay: {
+              workoutPlan: {
+                isActive: true,
+              },
+            },
           },
-        },
+        ],
         startedAt: {
           gte: weekStart.toDate(),
           lte: weekEnd.toDate(),
@@ -125,11 +130,25 @@ export class GetHomeData {
       };
     }
 
+    // Fetch free workout sessions completed by the athlete
+    const freeCompletedSessions = await prisma.workoutSession.findMany({
+      where: {
+        athleteId: dto.userId,
+        workoutDayId: null,
+        completedAt: { not: null },
+      },
+      select: {
+        startedAt: true,
+        completedAt: true,
+      },
+    });
+
     // Calculate workout streak
     const workoutStreak = calculateWorkoutStreak({
       workoutDays: activeWorkoutPlan.workoutDays,
       currentDate,
       timezoneOffset: dto.timezoneOffset,
+      additionalSessions: freeCompletedSessions,
     });
 
     return {

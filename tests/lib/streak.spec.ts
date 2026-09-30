@@ -182,4 +182,49 @@ describe("calculateWorkoutStreak Unit Tests", () => {
     // Com timezoneOffset correto, a sessão pertence a 2026-03-11 e conta como concluída
     expect(streak).toBe(1);
   });
+
+  it("8. Treino avulso (additionalSessions) concluído hoje incrementa o streak", () => {
+    // Quarta (hoje): o atleta fez um treino avulso e concluiu
+    const plan = createStandardWeekPlan();
+    const currentDate = dayjs.utc("2026-03-11T12:00:00Z"); // Quarta-feira
+
+    const streak = calculateWorkoutStreak({
+      workoutDays: plan,
+      currentDate,
+      timezoneOffset: 0,
+      additionalSessions: [
+        {
+          startedAt: "2026-03-11T10:00:00Z",
+          completedAt: "2026-03-11T11:00:00Z",
+        },
+      ],
+    });
+
+    expect(streak).toBe(1);
+  });
+
+  it("9. Treino avulso em dia de descanso + treino hoje formam sequência de 2 dias", () => {
+    // Quarta (hoje): treino planejado concluído. Terça (ontem era descanso): atleta fez treino avulso.
+    const plan = createStandardWeekPlan();
+    const currentDate = dayjs.utc("2026-03-11T12:00:00Z"); // Quarta-feira
+
+    // Sessão Quarta no plano
+    plan.find((d) => d.weekDay === WeekDay.WEDNESDAY)!.sessions = [
+      { startedAt: "2026-03-11T10:00:00Z", completedAt: "2026-03-11T11:00:00Z" },
+    ];
+
+    const streak = calculateWorkoutStreak({
+      workoutDays: plan,
+      currentDate,
+      timezoneOffset: 0,
+      additionalSessions: [
+        {
+          startedAt: "2026-03-10T10:00:00Z", // Terça-feira (dia de descanso que foi treinado avulso)
+          completedAt: "2026-03-10T11:00:00Z",
+        },
+      ],
+    });
+
+    expect(streak).toBe(2);
+  });
 });

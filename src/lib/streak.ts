@@ -33,18 +33,25 @@ export interface CalculateStreakParams {
   currentDate: dayjs.Dayjs;
   timezoneOffset: number;
   maxDaysBack?: number;
+  additionalSessions?: StreakWorkoutSession[];
 }
 
 /**
  * Calcula o streak de treinos consecutivos respeitando a semântica unificada de produto:
- * - Treino planejado e concluído: incrementa streak (+1);
- * - Dia de descanso (isRest = true): não incrementa e não quebra streak (preserva);
+ * - Treino concluído (planejado ou avulso): incrementa streak (+1);
+ * - Dia de descanso (isRest = true) sem treino: não incrementa e não quebra streak (preserva);
  * - Treino planejado no passado não concluído: quebra o streak (stop);
  * - Treino planejado de hoje ainda não concluído: não quebra o streak enquanto o dia não acabou;
  * - Dias futuros: ignorados.
  */
 export function calculateWorkoutStreak(params: CalculateStreakParams): number {
-  const { workoutDays, currentDate, timezoneOffset, maxDaysBack = 365 } = params;
+  const {
+    workoutDays,
+    currentDate,
+    timezoneOffset,
+    maxDaysBack = 365,
+    additionalSessions = [],
+  } = params;
 
   let streak = 0;
   const todayStr = currentDate.format("YYYY-MM-DD");
@@ -56,18 +63,17 @@ export function calculateWorkoutStreak(params: CalculateStreakParams): number {
 
     const workoutDay = workoutDays.find((d) => d.weekDay === checkWeekDay);
 
-    // Se o dia da semana não está no plano, pula
-    if (!workoutDay) {
-      continue;
-    }
+    // Verifica se houve sessão concluída nesta data civil (planejada ou avulsa)
+    const hasCompletedPlannedSession =
+      workoutDay?.sessions.some((session) => {
+        const sessionDate = dayjs
+          .utc(session.startedAt)
+          .utcOffset(timezoneOffset)
+          .format("YYYY-MM-DD");
+        return sessionDate === checkDateStr && session.completedAt !== null;
+      }) ?? false;
 
-    // Dia de descanso: não incrementa e não quebra streak
-    if (workoutDay.isRest) {
-      continue;
-    }
-
-    // Dia de treino planejado: verifica se houve sessão concluída nesta data civil
-    const hasCompletedSession = workoutDay.sessions.some((session) => {
+    const hasCompletedAdditionalSession = additionalSessions.some((session) => {
       const sessionDate = dayjs
         .utc(session.startedAt)
         .utcOffset(timezoneOffset)
@@ -75,15 +81,33 @@ export function calculateWorkoutStreak(params: CalculateStreakParams): number {
       return sessionDate === checkDateStr && session.completedAt !== null;
     });
 
+    const hasCompletedSession =
+      hasCompletedPlannedSession || hasCompletedAdditionalSession;
+
+    // Se houve treino concluído (planejado ou avulso): incrementa o streak
     if (hasCompletedSession) {
       streak++;
-    } else {
-      // Se for a data de hoje e ainda não foi concluído, não quebra a sequência
-      if (checkDateStr === todayStr) {
-        continue;
-      }
-      break;
+      continue;
     }
+
+    // Se o dia da semana não está no plano, apenas preserva e continua olhando para trás
+    if (!workoutDay) {
+      continue;
+    }
+
+    // Dia de descanso sem treino concluído: não incrementa e não quebra streak
+    if (workoutDay.isRest) {
+      continue;
+    }
+
+    // Dia de treino planejado sem treino concluído:
+    // Se for a data de hoje e ainda não foi concluído, não quebra a sequência enquanto o dia não acabou
+    if (checkDateStr === todayStr) {
+      continue;
+    }
+
+    // Treino planejado no passado não concluído: quebra a sequência
+    break;
   }
 
   return streak;

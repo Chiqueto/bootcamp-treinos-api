@@ -116,11 +116,24 @@ export class GetStats {
       },
     });
 
+    const freeCompletedSessions = await prisma.workoutSession.findMany({
+      where: {
+        athleteId: dto.userId,
+        workoutDayId: null,
+        completedAt: { not: null },
+      },
+      select: {
+        startedAt: true,
+        completedAt: true,
+      },
+    });
+
     const workoutStreak = activeWorkoutPlan
       ? calculateWorkoutStreak({
           workoutDays: activeWorkoutPlan.workoutDays,
           currentDate: toDate,
           timezoneOffset: dto.timezoneOffset,
+          additionalSessions: freeCompletedSessions,
         })
       : 0;
 
