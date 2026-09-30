@@ -149,7 +149,7 @@ export const GetWorkoutDayResponseSchema = z.object({
   sessions: z.array(
     z.object({
       id: z.uuid(),
-      workoutDayId: z.uuid(),
+      workoutDayId: z.uuid().nullable(),
       startedAt: z.iso.date().nullable(),
       completedAt: z.iso.date().nullable(),
     }),
@@ -350,9 +350,51 @@ export const WorkoutSessionExerciseResponseSchema = z.object({
 
 export const GetWorkoutSessionResponseSchema = z.object({
   id: z.uuid(),
-  workoutDayId: z.uuid(),
+  workoutDayId: z.uuid().nullable(),
   startedAt: z.string(),
   completedAt: z.string().nullable(),
   sessionExercises: z.array(WorkoutSessionExerciseResponseSchema),
 });
+
+export const CompleteWorkoutSessionResponseSchema = z.object({
+  id: z.uuid(),
+  workoutDayId: z.uuid().nullable(),
+  startedAt: z.string(),
+  completedAt: z.string(),
+});
+
+export const StartFreeWorkoutSessionResponseSchema = z.object({
+  userWorkoutSessionId: z.uuid(),
+  workoutSessionId: z.uuid(),
+  workoutDayId: z.uuid().nullable(),
+  startedAt: z.string(),
+  completedAt: z.string().nullable(),
+});
+
+export const ExerciseResponseSchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  ownerUserId: z.string().nullable(),
+});
+
+export const ListExercisesQuerySchema = z.object({
+  q: z.string().optional(),
+});
+
+export const CreateExerciseBodySchema = z.object({
+  name: z.string().min(1),
+});
+
+export const AddSessionExerciseParamsSchema = z.object({
+  sessionId: z.uuid(),
+});
+
+export const AddSessionExerciseBodySchema = z.object({
+  exerciseId: z.uuid(),
+});
+
+export const DeleteSessionExerciseParamsSchema = z.object({
+  sessionExerciseId: z.uuid(),
+});
+
 

@@ -33,3 +33,12 @@ export class ValidationError extends Error {
   }
 }
 
+export class PendingWorkoutSetsError extends Error {
+  constructor(
+    message = "Existem séries pendentes nesta sessão. Conclua ou remova todas as séries antes de finalizar o treino.",
+  ) {
+    super(message);
+    this.name = "PendingWorkoutSetsError";
+  }
+}
+

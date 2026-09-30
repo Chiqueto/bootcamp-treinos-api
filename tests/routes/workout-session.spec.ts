@@ -11,6 +11,7 @@ import { prisma } from "../../src/lib/db.js";
 import { workoutSessionRoutes } from "../../src/routes/workout-session.js";
 import {
   cleanupTestUsers,
+  createTestExercise,
   createTestSessionExercise,
   createTestUser,
   createTestWorkoutDay,
@@ -280,5 +281,104 @@ describe("WorkoutSession & WorkoutSet HTTP Routes", () => {
     const body = activeRes.json();
     expect(body.id).toBe(sessionA.id);
     expect(body.completedAt).toBeNull();
+  });
+
+  it("POST /workout-sessions/:sessionId/complete — conclui sessão com sucesso (200)", async () => {
+    mockAuthUser(userA);
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/workout-sessions/${sessionA.id}/complete`,
+    });
+
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.id).toBe(sessionA.id);
+    expect(body.completedAt).toBeDefined();
+
+    // Idempotência: segunda chamada retorna 200 com mesmo completedAt
+    const retryRes = await app.inject({
+      method: "POST",
+      url: `/workout-sessions/${sessionA.id}/complete`,
+    });
+    expect(retryRes.statusCode).toBe(200);
+    expect(retryRes.json().completedAt).toBe(body.completedAt);
+  });
+
+  it("POST /workout-sessions/:sessionId/complete — retorna 400 se houver séries pendentes", async () => {
+    mockAuthUser(userA);
+
+    // Cria série pendente
+    await app.inject({
+      method: "POST",
+      url: `/session-exercises/${sessionExerciseA1.id}/sets`,
+      payload: { reps: 10, type: "WORKING" },
+    });
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/workout-sessions/${sessionA.id}/complete`,
+    });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.json().code).toBe("PENDING_WORKOUT_SETS");
+  });
+
+  it("POST /workout-sessions/:sessionId/complete — retorna 404 para sessão de outro usuário", async () => {
+    mockAuthUser(userB);
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/workout-sessions/${sessionA.id}/complete`,
+    });
+
+    expect(res.statusCode).toBe(404);
+  });
+
+  it("POST /workout-sessions/free — inicia sessão avulsa (201)", async () => {
+    mockAuthUser(userB);
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/workout-sessions/free",
+    });
+
+    expect(res.statusCode).toBe(201);
+    const body = res.json();
+    expect(body.userWorkoutSessionId).toBeDefined();
+    expect(body.workoutDayId).toBeNull();
+  });
+
+  it("POST /workout-sessions/:sessionId/exercises — adiciona exercício à sessão avulsa (201)", async () => {
+    mockAuthUser(userB);
+
+    const freeSessRes = await app.inject({
+      method: "POST",
+      url: "/workout-sessions/free",
+    });
+    const sessionId = freeSessRes.json().userWorkoutSessionId;
+
+    const exercise = await createTestExercise({ name: "Barra Paralela", ownerUserId: null });
+
+    const addRes = await app.inject({
+      method: "POST",
+      url: `/workout-sessions/${sessionId}/exercises`,
+      payload: {
+        exerciseId: exercise.id,
+      },
+    });
+
+    expect(addRes.statusCode).toBe(201);
+    const body = addRes.json();
+    expect(body.exerciseNameSnapshot).toBe(exercise.name);
+    expect(body.order).toBe(1);
+
+    // DELETE /session-exercises/:sessionExerciseId — remove exercício
+    const delRes = await app.inject({
+      method: "DELETE",
+      url: `/session-exercises/${body.id}`,
+    });
+    expect(delRes.statusCode).toBe(200);
+    expect(delRes.json().success).toBe(true);
   });
 });

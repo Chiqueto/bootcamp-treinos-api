@@ -56,17 +56,35 @@ export async function createTestWorkoutDay(
   });
 }
 
+export const createdTestExerciseIds: string[] = [];
+
 export async function createTestExercise(override?: {
   id?: string;
   name?: string;
   ownerUserId?: string | null;
 }) {
-  return prisma.exercise.create({
+  const uid = crypto.randomUUID().slice(0, 8);
+  const exercise = await prisma.exercise.create({
     data: {
       id: override?.id ?? crypto.randomUUID(),
-      name: override?.name ?? "Supino Reto",
+      name: override?.name ?? `Supino Reto ${uid}`,
       ownerUserId: override?.ownerUserId ?? null,
     },
+  });
+  createdTestExerciseIds.push(exercise.id);
+  return exercise;
+}
+
+export async function cleanupTestExercises(exerciseIds: string[]) {
+  if (exerciseIds.length === 0) return;
+  await prisma.sessionExercise.deleteMany({
+    where: { exerciseId: { in: exerciseIds } },
+  });
+  await prisma.workoutExercise.deleteMany({
+    where: { exerciseId: { in: exerciseIds } },
+  });
+  await prisma.exercise.deleteMany({
+    where: { id: { in: exerciseIds } },
   });
 }
 
@@ -97,7 +115,7 @@ export async function createTestWorkoutExercise(
 }
 
 export async function createTestWorkoutSession(
-  workoutDayId: string,
+  workoutDayId: string | null,
   override?: {
     id?: string;
     athleteId?: string;
@@ -106,7 +124,7 @@ export async function createTestWorkoutSession(
   },
 ) {
   let athleteId = override?.athleteId;
-  if (!athleteId) {
+  if (!athleteId && workoutDayId) {
     const day = await prisma.workoutDay.findUnique({
       where: { id: workoutDayId },
       include: { workoutPlan: true },
@@ -116,7 +134,7 @@ export async function createTestWorkoutSession(
 
   if (!athleteId) {
     throw new Error(
-      `Não foi possível determinar athleteId para o workoutDayId: ${workoutDayId}`
+      `Não foi possível determinar athleteId para a sessão de teste`
     );
   }
 
@@ -229,7 +247,13 @@ export async function cleanupTestUsers(userIds: string[]) {
     });
   }
 
-  // 6. Delete custom exercises
+  // 6. Delete custom exercises and tracked test exercises
+  if (createdTestExerciseIds.length > 0) {
+    const exIds = [...createdTestExerciseIds];
+    createdTestExerciseIds.length = 0;
+    await cleanupTestExercises(exIds);
+  }
+
   await prisma.exercise.deleteMany({
     where: { ownerUserId: { in: userIds } },
   });

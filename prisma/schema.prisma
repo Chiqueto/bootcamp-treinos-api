@@ -111,11 +111,11 @@ model WorkoutExercise {
 }
 
 model WorkoutSession {
-  id           String     @id @default(uuid())
-  workoutDayId String
-  workoutDay   WorkoutDay @relation(fields: [workoutDayId], references: [id])
+  id           String      @id @default(uuid())
+  workoutDayId String?
+  workoutDay   WorkoutDay? @relation(fields: [workoutDayId], references: [id], onDelete: SetNull)
   athleteId    String
-  athlete      User       @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  athlete      User        @relation(fields: [athleteId], references: [id], onDelete: Cascade)
   startedAt    DateTime   @db.Timestamptz()
   completedAt  DateTime?  @db.Timestamptz()
   createdAt    DateTime   @default(now()) @db.Timestamptz()

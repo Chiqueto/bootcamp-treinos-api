@@ -15,6 +15,7 @@ import z from "zod";
 import { auth, authBaseUrl, trustedOrigins } from "./lib/auth.js";
 import { env } from "./lib/env.js";
 import { aiRoutes } from "./routes/ai.js";
+import { exerciseRoutes } from "./routes/exercise.js";
 import { homeRoutes } from "./routes/home.js";
 import { meRoutes } from "./routes/me.js";
 import { statsRoutes } from "./routes/stats.js";
@@ -95,6 +96,7 @@ await app.register(homeRoutes, { prefix: "/home" });
 await app.register(statsRoutes, { prefix: "/stats" });
 await app.register(meRoutes, { prefix: "/me" });
 await app.register(aiRoutes, { prefix: "/ai" });
+await app.register(exerciseRoutes, { prefix: "/exercises" });
 await app.register(workoutSessionRoutes);
 
 app.withTypeProvider<ZodTypeProvider>().route({

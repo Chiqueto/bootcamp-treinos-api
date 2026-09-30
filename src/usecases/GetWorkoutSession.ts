@@ -32,7 +32,7 @@ export interface SessionExerciseOutputDto {
 
 export interface GetWorkoutSessionOutputDto {
   id: string;
-  workoutDayId: string;
+  workoutDayId: string | null;
   startedAt: string;
   completedAt: string | null;
   sessionExercises: SessionExerciseOutputDto[];
