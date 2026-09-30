@@ -4,7 +4,8 @@
   "description": "",
   "scripts": {
     "dev": "tsx --watch src/index.ts .env",
-    "build": "prisma generate && tsc",
+    "build": "prisma generate && prisma migrate deploy && tsc",
+    "migrate:deploy": "prisma migrate deploy",
     "test": "vitest run",
     "test:watch": "vitest"
   },
