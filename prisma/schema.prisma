@@ -45,6 +45,7 @@ model User {
   bodyFatPercentage   Int? // 100 representa 100%
   createdExercises    Exercise[]
   workoutSessions     WorkoutSession[]
+  periodizations      Periodization[]
 
   @@unique([email])
   @@map("user")
@@ -59,7 +60,44 @@ model WorkoutPlan {
   createdAt DateTime @default(now()) @db.Timestamptz()
   updatedAt DateTime @updatedAt @db.Timestamptz()
 
-  workoutDays WorkoutDay[]
+  workoutDays       WorkoutDay[]
+  periodizationPlan PeriodizationPlan?
+}
+
+model Periodization {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  goal        String?
+  notes       String?
+  isActive    Boolean   @default(false)
+  startedAt   DateTime? @db.Timestamptz()
+  completedAt DateTime? @db.Timestamptz()
+  createdAt   DateTime  @default(now()) @db.Timestamptz()
+  updatedAt   DateTime  @updatedAt @db.Timestamptz()
+
+  plans       PeriodizationPlan[]
+
+  @@index([userId, createdAt])
+}
+
+model PeriodizationPlan {
+  id               String        @id @default(uuid())
+  periodizationId  String
+  periodization    Periodization @relation(fields: [periodizationId], references: [id], onDelete: Cascade)
+  workoutPlanId    String        @unique
+  workoutPlan      WorkoutPlan   @relation(fields: [workoutPlanId], references: [id], onDelete: Restrict)
+  order            Int
+  plannedStartDate DateTime?     @db.Date
+  plannedEndDate   DateTime?     @db.Date
+  activatedAt      DateTime?     @db.Timestamptz()
+  completedAt      DateTime?     @db.Timestamptz()
+  notes            String?
+  createdAt        DateTime      @default(now()) @db.Timestamptz()
+  updatedAt        DateTime      @updatedAt @db.Timestamptz()
+
+  @@unique([periodizationId, order])
 }
 
 model WorkoutDay {

@@ -122,43 +122,37 @@ describe("CreateWorkoutPlan Integration Tests", () => {
     expect(activePlansA[0]?.id).toBe(result.id);
   });
 
-  it("Cenário 3 — Estado legado inconsistente: múltiplos planos ativos antigos são todos desativados por updateMany", async () => {
+  it("Cenário 3 — Criação com activate: false não desativa o plano ativo atual e cria o novo inativo", async () => {
     const userA = await createTestUser({ name: "Usuário A" });
     createdUserIds.push(userA.id);
 
-    // Preparar propositalmente 2 planos ativos para o Usuário A
-    const planLegacy1 = await createTestWorkoutPlan(userA.id, {
-      name: "Plano Legado 1",
-      isActive: true,
-    });
-    const planLegacy2 = await createTestWorkoutPlan(userA.id, {
-      name: "Plano Legado 2",
+    // Preparar plano ativo A1
+    const planA1 = await createTestWorkoutPlan(userA.id, {
+      name: "Plano A1",
       isActive: true,
     });
 
-    // Executar criação de A3 para Usuário A
+    // Executar criação de A2 com activate: false
     const result = await createWorkoutPlan.execute({
       userId: userA.id,
-      name: "Plano A3",
+      name: "Plano A2 (Inativo)",
+      activate: false,
       workoutDays: defaultWorkoutDays,
     });
 
-    // Validar que ambos os legados ficaram inativos
-    const updatedLegacy1 = await prisma.workoutPlan.findUnique({
-      where: { id: planLegacy1.id },
+    // Validar que A1 continua ativo e A2 foi criado inativo
+    const updatedA1 = await prisma.workoutPlan.findUnique({
+      where: { id: planA1.id },
     });
-    const updatedLegacy2 = await prisma.workoutPlan.findUnique({
-      where: { id: planLegacy2.id },
-    });
-    const planA3 = await prisma.workoutPlan.findUnique({
+    const planA2 = await prisma.workoutPlan.findUnique({
       where: { id: result.id },
     });
 
-    expect(updatedLegacy1?.isActive).toBe(false);
-    expect(updatedLegacy2?.isActive).toBe(false);
-    expect(planA3?.isActive).toBe(true);
+    expect(updatedA1?.isActive).toBe(true);
+    expect(planA2?.isActive).toBe(false);
+    expect(result.isActive).toBe(false);
 
-    // Validar que somente A3 permanece ativo para A
+    // Validar que apenas A1 continua como ativo
     const activePlansA = await prisma.workoutPlan.findMany({
       where: {
         userId: userA.id,
@@ -167,6 +161,53 @@ describe("CreateWorkoutPlan Integration Tests", () => {
     });
 
     expect(activePlansA).toHaveLength(1);
-    expect(activePlansA[0]?.id).toBe(result.id);
+    expect(activePlansA[0]?.id).toBe(planA1.id);
+  });
+
+  it("Cenário 4 — Criação com activate: true explícito desativa o plano ativo atual e ativa o novo", async () => {
+    const userA = await createTestUser({ name: "Usuário A" });
+    createdUserIds.push(userA.id);
+
+    const planA1 = await createTestWorkoutPlan(userA.id, {
+      name: "Plano A1",
+      isActive: true,
+    });
+
+    const result = await createWorkoutPlan.execute({
+      userId: userA.id,
+      name: "Plano A2",
+      activate: true,
+      workoutDays: defaultWorkoutDays,
+    });
+
+    const updatedA1 = await prisma.workoutPlan.findUnique({
+      where: { id: planA1.id },
+    });
+    const planA2 = await prisma.workoutPlan.findUnique({
+      where: { id: result.id },
+    });
+
+    expect(updatedA1?.isActive).toBe(false);
+    expect(planA2?.isActive).toBe(true);
+    expect(result.isActive).toBe(true);
+  });
+
+  it("Cenário 5 — Constraint de banco: não permitir 2 WorkoutPlans ativos para o mesmo usuário no PostgreSQL", async () => {
+    const userA = await createTestUser({ name: "Usuário A" });
+    createdUserIds.push(userA.id);
+
+    // Primeiro plano ativo criado com sucesso
+    await createTestWorkoutPlan(userA.id, {
+      name: "Plano A1",
+      isActive: true,
+    });
+
+    // Tentativa direta de inserir segundo plano ativo para o mesmo usuário no banco deve falhar
+    await expect(
+      createTestWorkoutPlan(userA.id, {
+        name: "Plano A2 Ilegal",
+        isActive: true,
+      }),
+    ).rejects.toThrow();
   });
 });

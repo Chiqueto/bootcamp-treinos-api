@@ -18,6 +18,8 @@ import { aiRoutes } from "./routes/ai.js";
 import { exerciseRoutes } from "./routes/exercise.js";
 import { homeRoutes } from "./routes/home.js";
 import { meRoutes } from "./routes/me.js";
+import { periodizationRoutes } from "./routes/periodization.js";
+import { planningRoutes } from "./routes/planning.js";
 import { statsRoutes } from "./routes/stats.js";
 import { WorkoutPlanRoutes } from "./routes/workout-plan.js";
 import { workoutSessionRoutes } from "./routes/workout-session.js";
@@ -92,6 +94,8 @@ await app.register(fastifyApiReference, {
 });
 
 await app.register(WorkoutPlanRoutes, { prefix: "/workout-plans" });
+await app.register(periodizationRoutes, { prefix: "/periodizations" });
+await app.register(planningRoutes, { prefix: "/planning" });
 await app.register(homeRoutes, { prefix: "/home" });
 await app.register(statsRoutes, { prefix: "/stats" });
 await app.register(meRoutes, { prefix: "/me" });

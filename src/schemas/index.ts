@@ -63,7 +63,24 @@ export const WorkoutDaySchema = z
 export const WorkoutPlanSchema = z.object({
   id: z.uuid(),
   name: z.string().trim().min(1),
+  isActive: z.boolean().optional(),
   workoutDays: z.array(WorkoutDaySchema),
+});
+
+export const CreateWorkoutPlanBodySchema = WorkoutPlanSchema.omit({
+  id: true,
+}).extend({
+  activate: z.boolean().optional(),
+});
+
+export const WorkoutPlanSummaryResponseSchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  isActive: z.boolean(),
+});
+
+export const DuplicateWorkoutPlanBodySchema = z.object({
+  name: z.string().trim().min(1).optional(),
 });
 
 export const StartWorkoutSessionParamsSchema = z.object({
@@ -395,6 +412,288 @@ export const AddSessionExerciseBodySchema = z.object({
 
 export const DeleteSessionExerciseParamsSchema = z.object({
   sessionExerciseId: z.uuid(),
+});
+
+export const PeriodizationStatusSchema = z.enum([
+  "DRAFT",
+  "ACTIVE",
+  "PAUSED",
+  "COMPLETED",
+]);
+
+export const CreatePeriodizationBodySchema = z.object({
+  name: z.string().trim().min(1),
+  goal: z.string().trim().min(1).nullable().optional(),
+  notes: z.string().trim().min(1).nullable().optional(),
+});
+
+export const UpdatePeriodizationBodySchema = z.object({
+  name: z.string().trim().min(1).optional(),
+  goal: z.string().trim().min(1).nullable().optional(),
+  notes: z.string().trim().min(1).nullable().optional(),
+});
+
+export const PeriodizationParamsSchema = z.object({
+  id: z.uuid(),
+});
+
+export const PeriodizationPlanParamsSchema = z.object({
+  periodizationId: z.uuid(),
+  periodizationPlanId: z.uuid(),
+});
+
+export const PeriodizationItemResponseSchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  goal: z.string().nullable(),
+  notes: z.string().nullable(),
+  isActive: z.boolean(),
+  startedAt: z.string().nullable(),
+  completedAt: z.string().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  totalPlans: z.number().int().min(0),
+  status: PeriodizationStatusSchema,
+});
+
+export const ListPeriodizationsResponseSchema = z.array(
+  PeriodizationItemResponseSchema,
+);
+
+export const PeriodizationResponseSchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  goal: z.string().nullable(),
+  notes: z.string().nullable(),
+  isActive: z.boolean(),
+  startedAt: z.string().nullable(),
+  completedAt: z.string().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  status: PeriodizationStatusSchema,
+});
+
+export const PeriodizationPlanWorkoutPlanSummarySchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  isActive: z.boolean(),
+});
+
+export const PeriodizationPlanDetailResponseSchema = z.object({
+  id: z.uuid(),
+  periodizationId: z.uuid(),
+  workoutPlanId: z.uuid(),
+  order: z.number().int().min(1),
+  plannedStartDate: z.string().nullable(),
+  plannedEndDate: z.string().nullable(),
+  activatedAt: z.string().nullable(),
+  completedAt: z.string().nullable(),
+  notes: z.string().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  workoutPlan: PeriodizationPlanWorkoutPlanSummarySchema,
+});
+
+export const GetPeriodizationResponseSchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  goal: z.string().nullable(),
+  notes: z.string().nullable(),
+  isActive: z.boolean(),
+  startedAt: z.string().nullable(),
+  completedAt: z.string().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  status: PeriodizationStatusSchema,
+  plans: z.array(PeriodizationPlanDetailResponseSchema),
+});
+
+export const AddWorkoutPlanToPeriodizationBodySchema = z
+  .object({
+    workoutPlanId: z.uuid(),
+    plannedStartDate: z.string().nullable().optional(),
+    plannedEndDate: z.string().nullable().optional(),
+    notes: z.string().nullable().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.plannedStartDate && data.plannedEndDate) {
+      if (new Date(data.plannedEndDate) < new Date(data.plannedStartDate)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "plannedEndDate não pode ser anterior a plannedStartDate",
+          path: ["plannedEndDate"],
+        });
+      }
+    }
+  });
+
+export const PeriodizationCurrentBlockResponseSchema = z.object({
+  id: z.uuid(),
+  order: z.number().int().min(1),
+  workoutPlanId: z.uuid(),
+  workoutPlanName: z.string(),
+  activatedAt: z.string(),
+});
+
+export const PeriodizationLifecycleResponseSchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  status: PeriodizationStatusSchema,
+  startedAt: z.string().nullable(),
+  completedAt: z.string().nullable(),
+  currentBlock: PeriodizationCurrentBlockResponseSchema.nullable(),
+});
+
+export const CreateWorkoutPlanInPeriodizationBodySchema = z
+  .object({
+    name: z.string().trim().min(1),
+    workoutDays: z.array(WorkoutDaySchema),
+    plannedStartDate: z.string().nullable().optional(),
+    plannedEndDate: z.string().nullable().optional(),
+    notes: z.string().nullable().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.plannedStartDate && data.plannedEndDate) {
+      if (new Date(data.plannedEndDate) < new Date(data.plannedStartDate)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "plannedEndDate não pode ser anterior a plannedStartDate",
+          path: ["plannedEndDate"],
+        });
+      }
+    }
+  });
+
+export const UpdatePeriodizationPlanBodySchema = z
+  .object({
+    plannedStartDate: z.string().nullable().optional(),
+    plannedEndDate: z.string().nullable().optional(),
+    notes: z.string().nullable().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.plannedStartDate && data.plannedEndDate) {
+      if (new Date(data.plannedEndDate) < new Date(data.plannedStartDate)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "plannedEndDate não pode ser anterior a plannedStartDate",
+          path: ["plannedEndDate"],
+        });
+      }
+    }
+  });
+
+export const ReorderPeriodizationPlansBodySchema = z.object({
+  periodizationPlanIds: z.array(z.uuid()).min(1),
+});
+
+export const SuccessResponseSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+});
+
+export const CreateWorkoutPlanInPeriodizationResponseSchema = z.object({
+  id: z.uuid(),
+  periodizationId: z.uuid(),
+  workoutPlanId: z.uuid(),
+  order: z.number().int().min(1),
+  plannedStartDate: z.string().nullable(),
+  plannedEndDate: z.string().nullable(),
+  activatedAt: z.string().nullable(),
+  completedAt: z.string().nullable(),
+  notes: z.string().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  workoutPlan: WorkoutPlanSchema,
+});
+
+export const PlanningPeriodizationBlockStatusSchema = z.enum([
+  "PLANNED",
+  "ACTIVE",
+  "COMPLETED",
+]);
+
+export const PlanningWorkoutPlanPeriodizationSummarySchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  periodizationPlanId: z.uuid(),
+  order: z.number().int().min(1),
+  status: PlanningPeriodizationBlockStatusSchema,
+});
+
+export const PlanningWorkoutPlanSummarySchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  isActive: z.boolean(),
+  workoutDaysCount: z.number().int().min(0),
+  createdAt: z.string(),
+  periodization: PlanningWorkoutPlanPeriodizationSummarySchema.nullable(),
+});
+
+export const PlanningPeriodizationBlockSummarySchema = z.object({
+  id: z.uuid(),
+  order: z.number().int().min(1),
+  workoutPlanId: z.uuid(),
+  workoutPlanName: z.string(),
+  activatedAt: z.string(),
+  plannedStartDate: z.string().nullable(),
+  plannedEndDate: z.string().nullable(),
+});
+
+export const PlanningPeriodizationSummarySchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  goal: z.string().nullable(),
+  status: PeriodizationStatusSchema,
+  isActive: z.boolean(),
+  startedAt: z.string().nullable(),
+  completedAt: z.string().nullable(),
+  totalBlocks: z.number().int().min(0),
+  completedBlocks: z.number().int().min(0),
+  currentBlock: PlanningPeriodizationBlockSummarySchema.nullable(),
+  createdAt: z.string(),
+});
+
+export const NoActiveContextSchema = z.object({
+  type: z.literal("NONE"),
+});
+
+export const ActiveStandalonePlanDetailSchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  workoutDaysCount: z.number().int().min(0),
+  createdAt: z.string(),
+});
+
+export const ActiveStandalonePlanContextSchema = z.object({
+  type: z.literal("STANDALONE_PLAN"),
+  plan: ActiveStandalonePlanDetailSchema,
+});
+
+export const ActivePeriodizationDetailSchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  goal: z.string().nullable(),
+  startedAt: z.string().nullable(),
+  currentBlock: PlanningPeriodizationBlockSummarySchema,
+  totalBlocks: z.number().int().min(0),
+  completedBlocks: z.number().int().min(0),
+});
+
+export const ActivePeriodizationContextSchema = z.object({
+  type: z.literal("PERIODIZATION"),
+  periodization: ActivePeriodizationDetailSchema,
+});
+
+export const ActiveContextSchema = z.discriminatedUnion("type", [
+  NoActiveContextSchema,
+  ActiveStandalonePlanContextSchema,
+  ActivePeriodizationContextSchema,
+]);
+
+export const PlanningOverviewResponseSchema = z.object({
+  activeContext: ActiveContextSchema,
+  plans: z.array(PlanningWorkoutPlanSummarySchema),
+  periodizations: z.array(PlanningPeriodizationSummarySchema),
 });
 
 

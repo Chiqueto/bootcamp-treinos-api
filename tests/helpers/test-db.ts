@@ -42,6 +42,7 @@ export async function createTestWorkoutDay(
     weekDay?: WeekDay;
     isRest?: boolean;
     estimatedDurationInSeconds?: number;
+    coverImageUrl?: string | null;
   },
 ) {
   return prisma.workoutDay.create({
@@ -52,6 +53,61 @@ export async function createTestWorkoutDay(
       weekDay: override?.weekDay ?? WeekDay.MONDAY,
       isRest: override?.isRest ?? false,
       estimatedDurationInSeconds: override?.estimatedDurationInSeconds ?? 3600,
+      coverImageUrl: override?.coverImageUrl ?? null,
+    },
+  });
+}
+
+export async function createTestPeriodization(
+  userId: string,
+  override?: {
+    id?: string;
+    name?: string;
+    goal?: string | null;
+    notes?: string | null;
+    isActive?: boolean;
+    startedAt?: Date | null;
+    completedAt?: Date | null;
+  },
+) {
+  return prisma.periodization.create({
+    data: {
+      id: override?.id ?? crypto.randomUUID(),
+      userId,
+      name: override?.name ?? "Periodização Teste",
+      goal: override?.goal ?? "Hipertrofia e Força",
+      notes: override?.notes ?? null,
+      isActive: override?.isActive ?? false,
+      startedAt: override?.startedAt ?? null,
+      completedAt: override?.completedAt ?? null,
+    },
+  });
+}
+
+export async function createTestPeriodizationPlan(
+  periodizationId: string,
+  workoutPlanId: string,
+  override?: {
+    id?: string;
+    order?: number;
+    plannedStartDate?: Date | null;
+    plannedEndDate?: Date | null;
+    activatedAt?: Date | null;
+    completedAt?: Date | null;
+    notes?: string | null;
+  },
+) {
+  return prisma.periodizationPlan.create({
+    data: {
+      id: override?.id ?? crypto.randomUUID(),
+      periodizationId,
+      workoutPlanId,
+      order: override?.order ?? 1,
+      plannedStartDate: override?.plannedStartDate ?? null,
+      plannedEndDate: override?.plannedEndDate ?? null,
+      activatedAt: override?.activatedAt ?? null,
+      completedAt: override?.completedAt ?? null,
+      notes: override?.notes ?? null,
     },
   });
 }
@@ -241,9 +297,26 @@ export async function cleanupTestUsers(userIds: string[]) {
       });
     }
 
-    // 5. Delete plans
+    // 5. Delete periodization plans and periodizations before deleting workout plans (due to Restrict)
+    await prisma.periodizationPlan.deleteMany({
+      where: {
+        OR: [
+          { periodization: { userId: { in: userIds } } },
+          { workoutPlanId: { in: planIds } },
+        ],
+      },
+    });
+    await prisma.periodization.deleteMany({
+      where: { userId: { in: userIds } },
+    });
+
+    // 6. Delete plans
     await prisma.workoutPlan.deleteMany({
       where: { id: { in: planIds } },
+    });
+  } else {
+    await prisma.periodization.deleteMany({
+      where: { userId: { in: userIds } },
     });
   }
 

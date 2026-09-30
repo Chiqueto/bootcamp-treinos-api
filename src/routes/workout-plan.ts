@@ -6,6 +6,8 @@ import { ConflictError, NotFoundError } from "../errors/index.js";
 import { WorkoutPlanNotActiveError } from "../errors/index.js";
 import { auth } from "../lib/auth.js";
 import {
+  CreateWorkoutPlanBodySchema,
+  DuplicateWorkoutPlanBodySchema,
   ErrorSchema,
   GetWorkoutDayParamsSchema,
   GetWorkoutDayResponseSchema,
@@ -19,8 +21,12 @@ import {
   UpdateWorkoutSessionParamsSchema,
   UpdateWorkoutSessionResponseSchema,
   WorkoutPlanSchema,
+  WorkoutPlanSummaryResponseSchema,
 } from "../schemas/index.js";
+import { ActivateWorkoutPlan } from "../usecases/ActivateWorkoutPlan.js";
 import { CreateWorkoutPlan } from "../usecases/CreateWorkoutPlan.js";
+import { DeactivateWorkoutPlan } from "../usecases/DeactivateWorkoutPlan.js";
+import { DuplicateWorkoutPlan } from "../usecases/DuplicateWorkoutPlan.js";
 import { GetWorkoutDay } from "../usecases/GetWorkoutDay.js";
 import { GetWorkoutPlan } from "../usecases/GetWorkoutPlan.js";
 import { ListWorkoutPlans } from "../usecases/ListWorkoutPlans.js";
@@ -181,12 +187,13 @@ export const WorkoutPlanRoutes = async (app: FastifyInstance) => {
       operationId: "createWorkoutPlan",
       tags: ["Workout Plan"],
       summary: "Create a workout plan",
-      body: WorkoutPlanSchema.omit({ id: true }),
+      body: CreateWorkoutPlanBodySchema,
       response: {
         201: WorkoutPlanSchema,
         400: ErrorSchema,
         401: ErrorSchema,
         404: ErrorSchema,
+        409: ErrorSchema,
         500: ErrorSchema,
       },
     },
@@ -206,6 +213,7 @@ export const WorkoutPlanRoutes = async (app: FastifyInstance) => {
         const result = await createWorkoutPlan.execute({
           userId: session.user.id,
           name: request.body.name,
+          activate: request.body.activate,
           workoutDays: request.body.workoutDays,
         });
 
@@ -215,6 +223,193 @@ export const WorkoutPlanRoutes = async (app: FastifyInstance) => {
           return reply.status(404).send({
             error: error.message,
             code: "NOT_FOUND",
+          });
+        }
+
+        if (error instanceof ConflictError) {
+          return reply.status(409).send({
+            error: error.message,
+            code: (error as { code?: string }).code || "CONFLICT",
+          });
+        }
+
+        app.log.error(error);
+        return reply.status(500).send({
+          error: "Internal server error",
+          code: "INTERNAL_SERVER_ERROR",
+        });
+      }
+    },
+  });
+
+  app.withTypeProvider<ZodTypeProvider>().route({
+    method: "POST",
+    url: "/:id/activate",
+    schema: {
+      operationId: "activateWorkoutPlan",
+      tags: ["Workout Plan"],
+      summary: "Activate a workout plan",
+      params: GetWorkoutPlanParamsSchema,
+      response: {
+        200: WorkoutPlanSummaryResponseSchema,
+        401: ErrorSchema,
+        404: ErrorSchema,
+        409: ErrorSchema,
+        500: ErrorSchema,
+      },
+    },
+    handler: async (request, reply) => {
+      try {
+        const session = await auth.api.getSession({
+          headers: fromNodeHeaders(request.headers),
+        });
+        if (!session) {
+          return reply.status(401).send({
+            error: "Unauthorized",
+            code: "UNAUTHORIZED",
+          });
+        }
+
+        const activateWorkoutPlan = new ActivateWorkoutPlan();
+        const result = await activateWorkoutPlan.execute({
+          userId: session.user.id,
+          workoutPlanId: request.params.id,
+        });
+
+        return reply.status(200).send(result);
+      } catch (error) {
+        if (error instanceof NotFoundError) {
+          return reply.status(404).send({
+            error: error.message,
+            code: "NOT_FOUND",
+          });
+        }
+
+        if (error instanceof ConflictError) {
+          return reply.status(409).send({
+            error: error.message,
+            code: (error as { code?: string }).code || "CONFLICT",
+          });
+        }
+
+        app.log.error(error);
+        return reply.status(500).send({
+          error: "Internal server error",
+          code: "INTERNAL_SERVER_ERROR",
+        });
+      }
+    },
+  });
+
+  app.withTypeProvider<ZodTypeProvider>().route({
+    method: "POST",
+    url: "/:id/deactivate",
+    schema: {
+      operationId: "deactivateWorkoutPlan",
+      tags: ["Workout Plan"],
+      summary: "Deactivate a workout plan",
+      params: GetWorkoutPlanParamsSchema,
+      response: {
+        200: WorkoutPlanSummaryResponseSchema,
+        401: ErrorSchema,
+        404: ErrorSchema,
+        409: ErrorSchema,
+        500: ErrorSchema,
+      },
+    },
+    handler: async (request, reply) => {
+      try {
+        const session = await auth.api.getSession({
+          headers: fromNodeHeaders(request.headers),
+        });
+        if (!session) {
+          return reply.status(401).send({
+            error: "Unauthorized",
+            code: "UNAUTHORIZED",
+          });
+        }
+
+        const deactivateWorkoutPlan = new DeactivateWorkoutPlan();
+        const result = await deactivateWorkoutPlan.execute({
+          userId: session.user.id,
+          workoutPlanId: request.params.id,
+        });
+
+        return reply.status(200).send(result);
+      } catch (error) {
+        if (error instanceof NotFoundError) {
+          return reply.status(404).send({
+            error: error.message,
+            code: "NOT_FOUND",
+          });
+        }
+
+        if (error instanceof ConflictError) {
+          return reply.status(409).send({
+            error: error.message,
+            code: (error as { code?: string }).code || "CONFLICT",
+          });
+        }
+
+        app.log.error(error);
+        return reply.status(500).send({
+          error: "Internal server error",
+          code: "INTERNAL_SERVER_ERROR",
+        });
+      }
+    },
+  });
+
+  app.withTypeProvider<ZodTypeProvider>().route({
+    method: "POST",
+    url: "/:id/duplicate",
+    schema: {
+      operationId: "duplicateWorkoutPlan",
+      tags: ["Workout Plan"],
+      summary: "Duplicate a workout plan",
+      params: GetWorkoutPlanParamsSchema,
+      body: DuplicateWorkoutPlanBodySchema,
+      response: {
+        201: WorkoutPlanSchema,
+        400: ErrorSchema,
+        401: ErrorSchema,
+        404: ErrorSchema,
+        409: ErrorSchema,
+        500: ErrorSchema,
+      },
+    },
+    handler: async (request, reply) => {
+      try {
+        const session = await auth.api.getSession({
+          headers: fromNodeHeaders(request.headers),
+        });
+        if (!session) {
+          return reply.status(401).send({
+            error: "Unauthorized",
+            code: "UNAUTHORIZED",
+          });
+        }
+
+        const duplicateWorkoutPlan = new DuplicateWorkoutPlan();
+        const result = await duplicateWorkoutPlan.execute({
+          userId: session.user.id,
+          workoutPlanId: request.params.id,
+          name: request.body?.name,
+        });
+
+        return reply.status(201).send(result);
+      } catch (error) {
+        if (error instanceof NotFoundError) {
+          return reply.status(404).send({
+            error: error.message,
+            code: "NOT_FOUND",
+          });
+        }
+
+        if (error instanceof ConflictError) {
+          return reply.status(409).send({
+            error: error.message,
+            code: (error as { code?: string }).code || "CONFLICT",
           });
         }
 
