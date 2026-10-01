@@ -443,4 +443,220 @@ Para evitar o padrão N+1 no frontend:
 - **Garantia para Novos Planos:**
   - Use cases `CreateWorkoutPlan`, `CreateWorkoutPlanInPeriodization` e `CreatePeriodizationDraftFromAI` utilizam `resolveCanonicalExerciseId` / `resolveCanonicalExerciseMap`, resolvendo automaticamente contra custom ou catálogo global durante a criação.
 
+---
+
+### Task 3.2 — History Timeline & Detail API
+- **Status:** `3.2 IMPLEMENTADA`
+- **Data:** 2026-10-01
+- **Endpoints Implementados:**
+  - `GET /history/sessions`: Linha do tempo cronológica unificada (treinos planejados e avulsos) com paginação opaca baseada em cursor.
+  - `GET /history/sessions/:sessionId`: Detalhe histórico integral de uma sessão concluída, contrastando prescrição (`planned`) e execução real (`performed`).
+- **Regras Fundamentais de Domínio & Ownership:**
+  - **Filtro de Conclusão:** O histórico contempla exclusivamente sessões finalizadas (`WorkoutSession.completedAt IS NOT NULL`). Sessões ativas pertencem ao tracker em andamento.
+  - **Isolamento de Atleta:** Todas as consultas filtram estritamente `athleteId === authenticatedUser.id`.
+  - **Tratamento no Detalhe (`GET /history/sessions/:sessionId`):** Sessão inexistente, pertencente a outro usuário ou ainda ativa (`completedAt === null`) retorna indistintamente status **404 Not Found** com código `SESSION_NOT_FOUND` (sem vazar metadados de outros usuários ou estado ativo).
+  - **Origens de Sessão:** `origin` opcional via query param (`origin=PLANNED` ou `origin=FREE`). Sem filtro, exibe ambas na mesma timeline unificada. Sessões `FREE` mantêm `workoutPlanId`, `workoutPlanNameSnapshot` e `workoutDayNameSnapshot` nulos.
+  - **Snapshots Imutáveis:** A exibição do histórico utiliza exclusivamente os snapshots gravados na conclusão/execução (`workoutPlanNameSnapshot`, `workoutDayNameSnapshot`, `exerciseNameSnapshot`). Renomear ou excluir o plano original não distorce o registro histórico. Exercícios legados com `exerciseId = null` continuam exibindo normalmente o snapshot textual.
+- **Estratégia de Paginação por Cursor:**
+  - **Ordenação Canônica:** `completedAt DESC, id DESC`, usufruindo diretamente do índice parcial composto criado na Task 3.1B:
+    `("athleteId", "completedAt" DESC, "id" DESC) WHERE "completedAt" IS NOT NULL`.
+  - **Cursor Opaco:** Serialização `{ v: 1, completedAt: string (ISO), id: string (UUID) }` em `base64url`.
+  - **Validação e Resiliência:** Módulo centralizado `history-cursor.ts` com `encodeHistoryCursor` e `decodeHistoryCursor`. Cursors corrompidos, com formato inválido, timestamp inválido ou versão != 1 retornam status **400 Bad Request** com código estável `INVALID_CURSOR`.
+  - **Boundary SQL:** `completedAt < cursor.completedAt OR (completedAt = cursor.completedAt AND id < cursor.id)`. Não depende da existência contínua do registro do cursor no banco e garante imunidade ao deslocamento de dados caso novos treinos sejam concluídos durante a navegação.
+  - **Controle de Página:** Busca `limit + 1` (default 15, min 1, max 50). Retorna `{ items, nextCursor, hasMore }`.
+- **Estratégia de Performance Anti-N+1:**
+  - Quantidade rigorosamente constante de queries de banco ($O(1)$) na timeline:
+    - **Query 1:** Prisma `findMany` com `take: limit + 1` ordenado por `completedAt DESC, id DESC`.
+    - **Query 2:** Agregação relacional única executada diretamente no PostgreSQL via `$queryRaw` agrupando por `ws.id` (`COUNT(DISTINCT se.id)`, contagem condicional de séries `WORKING` e `WARMUP`, e soma de tonelagem `SUM(weightInGrams * reps)`).
+  - Previne regressões de overhead na CPU do Node ao não carregar milhares de séries na memória da aplicação para agregação manual.
+- **Métricas de Execução (Fatos sem Julgamento):**
+  - `durationInSeconds`: `Math.max(0, Math.floor((completedAt - startedAt) / 1000))` computado dinamicamente.
+  - `exercisesCount`: Contagem de `SessionExercise` pertencentes à sessão.
+  - `workingSetsCount`: Contagem de `WorkoutSet` com `type = 'WORKING'` e `completedAt IS NOT NULL`.
+  - `warmupSetsCount`: Contagem de `WorkoutSet` com `type = 'WARMUP'` e `completedAt IS NOT NULL` (contextual, excluído do volume de carga).
+  - `totalLoadVolumeGrams`: `SUM(weightInGrams * reps)` para `WORKING` concluídos. Séries sem carga (`weightInGrams = null`) contam em `workingSetsCount`, mas adicionam `0` à tonelagem. Séries incompletas são ignoradas.
+  - `totalLoadVolumeKg`: `totalLoadVolumeGrams / 1000`.
+- **Separação Planejado vs Realizado no Detalhe:**
+  - `planned`: Extraído estritamente dos snapshots do `SessionExercise` (`plannedWarmupSets`, `plannedSets`, `plannedReps`, `plannedRestTimeInSeconds`).
+  - `performed`: Extraído das séries concluídas (`warmupSetsCount`, `workingSetsCount`, `loadVolumeGrams`, `loadVolumeKg`).
+  - `sets`: Lista ordenada de séries concluídas (`order ASC, createdAt ASC, id ASC`). Séries com `completedAt === null` são omitidas do detalhe.
+- **Orval & Frontend:**
+  - Especificação OpenAPI atualizada em `swagger.json` e cliente gerado via Orval em `app/_lib/api/fetch-generated/index.ts` com endpoints tipados `listWorkoutHistory` e `getWorkoutHistorySession`. Nenhum componente de UI de histórico criado nesta task (reservado para Task 3.5).
+
+---
+
+### Task 3.3 — Exercise Evolution & Load PR API
+- **Status:** `3.3 IMPLEMENTADA`
+- **Data:** 2026-10-01
+- **Endpoint Implementado:**
+  - `GET /history/exercises/:exerciseId`: Linha do tempo longitudinal de um exercício canônico específico, contendo histórico sessão a sessão, séries WORKING concluídas, evolução de carga/reps/RIR/volume e recorde pessoal (`loadPR`).
+- **Contrato do Endpoint:**
+  - **Query params:** `cursor?: string`, `limit?: number` (default 20, min 1, max 50).
+  - **Response Root (`200 OK`):**
+    ```json
+    {
+      "exercise": {
+        "id": "uuid",
+        "name": "Supino Reto Barra",
+        "ownerUserId": null,
+        "muscles": [
+          { "muscleGroup": "CHEST", "role": "PRIMARY" },
+          { "muscleGroup": "TRICEPS", "role": "SECONDARY" },
+          { "muscleGroup": "SHOULDERS", "role": "SECONDARY" }
+        ]
+      },
+      "loadPR": {
+        "weightInGrams": 100000,
+        "weightKg": 100,
+        "reps": 5,
+        "rir": 1,
+        "completedAt": "2026-10-01T10:15:00.000Z",
+        "workoutSessionId": "uuid",
+        "sessionExerciseId": "uuid",
+        "workoutSetId": "uuid",
+        "origin": "PLANNED",
+        "workoutPlanNameSnapshot": "Hipertrofia A",
+        "workoutDayNameSnapshot": "Upper A"
+      },
+      "items": [
+        {
+          "workoutSessionId": "uuid",
+          "startedAt": "iso-date",
+          "completedAt": "iso-date",
+          "origin": "PLANNED",
+          "workoutPlanNameSnapshot": "Hipertrofia A",
+          "workoutDayNameSnapshot": "Upper A",
+          "exerciseNameSnapshot": "Supino Reto Barra",
+          "workingSetsCount": 3,
+          "totalReps": 24,
+          "loadVolumeGrams": 2400000,
+          "loadVolumeKg": 2400,
+          "topSet": {
+            "workoutSetId": "uuid",
+            "weightInGrams": 100000,
+            "weightKg": 100,
+            "reps": 8,
+            "rir": 2
+          },
+          "sets": [
+            {
+              "id": "uuid",
+              "sessionExerciseId": "uuid",
+              "order": 1,
+              "weightInGrams": 100000,
+              "weightKg": 100,
+              "reps": 8,
+              "rir": 2,
+              "durationInSeconds": null,
+              "notes": null,
+              "completedAt": "iso-date"
+            }
+          ]
+        }
+      ],
+      "nextCursor": "string | null",
+      "hasMore": false
+    }
+    ```
+- **Controle de Acesso & Ownership:**
+  - Acesso permitido somente para exercícios globais (`ownerUserId IS NULL`) ou customizados pertencentes ao usuário autenticado (`ownerUserId === authenticatedUser.id`).
+  - Exercício inexistente ou pertencente a outro usuário retorna status **404 Not Found** com código estável `EXERCISE_NOT_FOUND` (prevenção contra IDOR).
+  - Histórico de execução filtra estritamente `WorkoutSession.athleteId === authenticatedUser.id` e `WorkoutSession.completedAt IS NOT NULL`. Sessões ativas ou de terceiros nunca participam.
+  - Exercício acessível mas sem histórico retorna status `200 OK` com `loadPR: null`, `items: []`, `nextCursor: null`, `hasMore: false`.
+- **Séries Válidas para Evolução:**
+  - Participam exclusivamente séries `WorkoutSet.type === 'WORKING'` com `completedAt IS NOT NULL`.
+  - Séries `WARMUP` e séries incompletas são sumariamente excluídas da evolução, do cálculo do `loadPR`, do volume e da contagem de repetições.
+- **Definição de Load PR e Critérios de Desempate:**
+  - `loadPR`: Maior `weightInGrams` registrada em uma série `WORKING` concluída em qualquer treino finalizado do atleta para aquele exercício.
+  - Séries com carga nula (`weightInGrams = null`) não são candidatas a recorde de carga. Se o atleta nunca utilizou carga externa no exercício, `loadPR` retorna `null`.
+  - Desempate determinístico oficial:
+    1. `weightInGrams DESC`
+    2. `reps DESC` (NULLS LAST)
+    3. `set.completedAt DESC`
+    4. `set.id DESC`
+  - `rir` **NÃO** é critério de desempate do recorde pessoal.
+  - Calculado diretamente no PostgreSQL com `LIMIT 1` para não sobrecarregar a memória da aplicação.
+- **Unidade da Evolução & Consolidação por Sessão:**
+  - Cada item retornado na lista representa uma sessão de treino concluída (`WorkoutSession`).
+  - Múltiplos `SessionExercise` do mesmo exercício canônico dentro da mesma sessão são consolidados em um único item histórico (evitando duplicar a sessão na timeline do exercício).
+  - Snapshot de nome (`exerciseNameSnapshot`): Adota o snapshot da ocorrência de menor `SessionExercise.order`.
+  - Ordem das séries no item: `SessionExercise.order ASC, WorkoutSet.order ASC, WorkoutSet.createdAt ASC, WorkoutSet.id ASC`.
+  - `topSet`: Representação factual da melhor série realizada naquela sessão (ordenada por `weightInGrams DESC NULLS LAST, reps DESC NULLS LAST, completedAt DESC, id DESC`). Caso todas as séries sejam bodyweight (`weightInGrams = null`), o `topSet` ainda é identificado com base nas repetições.
+- **Resolução de Legado (`exerciseId = null`) e Prevenção de Colisão:**
+  - Séries legadas com `SessionExercise.exerciseId = null` e correspondência exata normalizada (`LOWER(TRIM(exerciseNameSnapshot)) = LOWER(TRIM(targetExercise.name))`) são incorporadas.
+  - **Mecanismo Anti-Colisão Custom vs Global:** Antes de habilitar o fallback de nome, a rota consulta `resolveCanonicalExerciseId(userId, targetExercise.name)`. O fallback por nome só é ativado se o resolver apontar estritamente para `targetExercise.id`.
+  - Em casos onde o atleta possui um exercício customizado com o mesmo nome de um exercício global, a série legada é atribuída com exclusividade ao exercício customizado (que possui precedência canônica), prevenindo duplicação de dados.
+  - Correspondência fuzzy, parcial ou semântica por IA é expressamente proibida.
+- **Estratégia de Performance Anti-N+1:**
+  - Quantidade rigorosamente constante de queries ($O(1)$) em relação ao tamanho da página:
+    - **Query 1:** Busca do `Exercise` com validação de ownership e carregamento de `muscles`.
+    - **Query 2:** Resolução do ID canônico por nome via `resolveCanonicalExerciseId` (em memória/banco).
+    - **Query 3:** Busca do `loadPR` no PostgreSQL com `LIMIT 1`.
+    - **Query 4:** Paginação de sessões concluídas usando `EXISTS (SessionExercise matching exercise)` com boundary de cursor e `LIMIT limit + 1`.
+    - **Query 5:** Busca em lote (`SessionExercise.findMany`) com `include: sets` apenas para as sessões da página.
+  - Teste de performance dedicado confirma que o total de queries de banco é idêntico para páginas de 2 ou de 8 sessões.
+- **Orval & Frontend:**
+  - Swagger atualizado e cliente gerado via Orval em `bootcamp-treinos-frontend` (`getExerciseEvolution` tipado com parâmetros, query e resposta).
+
+---
+
+### Task 3.4 — Weekly Volume & Muscle Analytics API (IMPLEMENTADA)
+
+- **Data:** 2026-10-01
+- **Endpoints Implementados:**
+  - `GET /history/analytics/weekly`: Agregação temporal semanal de treinos concluídos, séries efetivas (`WORKING`), séries de aquecimento (`WARMUP`), volume de carga acumulado (`loadVolumeGrams` / `loadVolumeKg`) e duração total/média de treino por semana oficial Trainvy.
+  - `GET /history/analytics/muscles`: Agregação muscular categórica de séries de trabalho diretas (`PRIMARY`) e indiretas (`SECONDARY`) sobre os 13 grupos musculares canônicos, total de séries executadas, classificadas e não-classificadas.
+- **Range Temporal e Governança de Timezone:**
+  - Ambos os endpoints exigem parâmetro `tz` em formato IANA válido (ex: `America/Sao_Paulo`, `America/New_York`, `Europe/London`).
+  - Helper central `validateIanaTimezone()` valida o identificador via `Intl.DateTimeFormat` e rejeita explicitamente offsets brutos como `-03:00`, `GMT-3` ou `UTC+2` com status **400 Bad Request** (`code: INVALID_TIMEZONE`), blindando o PostgreSQL contra quebras e garantindo compatibilidade com regras de horário de verão (DST).
+  - Parâmetros `startDate` e `endDate` representam datas civis no timezone do usuário (`YYYY-MM-DD`). A função `validateCivilDate()` valida dias e meses no calendário real (ex: `2026-02-31` é rejeitado com status **400 Bad Request** e código `INVALID_DATE_RANGE`).
+  - Semântica de janela half-open no PostgreSQL: `ws."completedAt" >= (${startDate}::timestamp AT TIME ZONE tz) AND ws."completedAt" < ((${endDate}::timestamp + INTERVAL '1 day') AT TIME ZONE tz)`, garantindo inclusão exata de 00:00:00 até o final do dia civil sem dependência de frações como `23:59:59.999`.
+- **Weekly Analytics (`GET /history/analytics/weekly`):**
+  - **Dois Modos Exclusivos:**
+    - **Modo A (Range explícito):** `startDate` e `endDate` fornecidos obrigatoriamente juntos.
+    - **Modo B (Contagem de semanas):** `weeksCount` (inteiro entre 1 e 52; default 8 quando nenhuma janela é enviada). O período inclui a semana local atual + as $N-1$ semanas anteriores.
+    - Misturar `startDate`/`endDate` com `weeksCount` é rejeitado com status 400 (`code: INVALID_DATE_RANGE`).
+  - **Semana Oficial Trainvy:**
+    - Definida como Segunda-feira 00:00 até a próxima Segunda-feira 00:00 no timezone local do usuário.
+    - Agrupamento no banco via `DATE_TRUNC('week', ws."completedAt" AT TIME ZONE tz)::date`. Isso assegura que um treino concluído na Segunda-feira 01:00 UTC (Domingo 22:00 local em São Paulo) pertença à semana anterior, enquanto um treino concluído na Segunda-feira 00:00 local pertença à nova semana.
+  - **Preenchimento de Semanas Vazias:**
+    - O domínio gera a sequência contínua de semanas via `generateWeeksSequence()`.
+    - Semanas sem treinos registrados são devolvidas com valores zerados determinísticos (`workoutsCompleted = 0`, `workingSets = 0`, `warmupSets = 0`, `loadVolumeGrams = 0`, `totalDurationInSeconds = 0`, `averageDurationInSeconds = 0`), eliminando necessidade de interpolação no frontend.
+    - As semanas são retornadas estritamente em ordem cronológica crescente (`weekStartDate ASC`).
+  - **Prevenção de Multiplicação de Linhas (Anti-Row Multiplication):**
+    - Implementada via CTE em SQL bruto (`prisma.$queryRaw`):
+      - Sub-agregação 1 (`sessions_summary`): Agrupa por semana e calcula `COUNT(DISTINCT ws.id)` e `SUM(duration_sec)` das sessões.
+      - Sub-agregação 2 (`sets_summary`): Agrupa por semana e calcula séries `WORKING`, `WARMUP` e soma `weightInGrams * reps` como `BIGINT`.
+      - Junção via `FULL OUTER JOIN` sobre `week_start`.
+    - Essa separação previne que a duração da sessão seja multiplicada pela quantidade de séries do treino.
+- **Muscle Analytics (`GET /history/analytics/muscles`):**
+  - **Semântica Categórica (Sem Fatores Fracionários):**
+    - Considera exclusivamente séries `WorkoutSet.type = 'WORKING'` concluídas (`completedAt IS NOT NULL`). Séries `WARMUP` têm impacto zero.
+    - Para cada série de trabalho:
+      - `ExerciseMuscle.role = 'PRIMARY'` $\rightarrow$ `+1 directWorkingSet` no grupo.
+      - `ExerciseMuscle.role = 'SECONDARY'` $\rightarrow$ `+1 indirectWorkingSet` no grupo.
+    - Não aplica ponderações fracionárias (ex: 0.5 para secundário).
+    - Exercícios com múltiplos primários (ex: Agachamento: Quadríceps PRIMARY e Glúteos PRIMARY) somam `+1` direta em cada grupo sem inflar o total de séries executadas pelo atleta.
+  - **Integridade Matemática e Cobertura:**
+    - `totalWorkingSets`: Número real de séries `WORKING` concluídas no período (`COUNT(DISTINCT WorkoutSet.id)`). Cada série conta no máximo 1 vez.
+    - `classifiedWorkingSets`: Número de séries `WORKING` cujo exercício resolve para um `Exercise` com ao menos 1 `ExerciseMuscle`.
+    - `unclassifiedWorkingSets`: Calculado como `totalWorkingSets - classifiedWorkingSets`. Abrange séries com `exerciseId = null` (legado/avulso) ou exercícios sem mapeamento muscular.
+    - Invariante estrita testada: `totalWorkingSets === classifiedWorkingSets + unclassifiedWorkingSets`.
+    - A soma de diretas + indiretas entre músculos **nunca** é igualada a `totalWorkingSets`, preservando o rigor anatômico e metodológico.
+  - **Ordem Canônica Estável:**
+    - A resposta sempre lista todos os 13 `MuscleGroup`s (inclusive zerados), centralizados pela constante `CANONICAL_MUSCLE_ORDER`: `CHEST`, `BACK`, `SHOULDERS`, `BICEPS`, `TRICEPS`, `FOREARMS`, `QUADRICEPS`, `HAMSTRINGS`, `GLUTES`, `ADDUCTORS`, `HIP_ABDUCTORS`, `CALVES`, `CORE`.
+  - **Não Inclusão de Load Volume Muscular:**
+    - A task deliberadamente não distribui volume de carga (`kg`) por músculo, prevenindo distorções metodológicas em exercícios multiarticulares.
+- **Performance & Estrutura de Banco:**
+  - Ambas as rotas operam com quantidade constante de queries de agregação ($O(1)$) diretamente no banco PostgreSQL.
+  - Nenhuma migration de schema foi necessária (0 alterações DDL).
+  - Índices compostos pré-existentes (`WorkoutSession(athleteId, completedAt)`, `SessionExercise(workoutSessionId, exerciseId)`, `WorkoutSet(sessionExerciseId, type, completedAt)`, `ExerciseMuscle(exerciseId, muscleGroup)`) foram auditados e oferecem planos de execução otimizados por índice.
+- **Orval & Frontend:**
+  - OpenAPI Swagger exportado e tipado no frontend em `app/_lib/api/fetch-generated/index.ts`:
+    - `getWeeklyTrainingAnalytics(params)`
+    - `getMuscleTrainingAnalytics(params)`
+
+
+
+
 

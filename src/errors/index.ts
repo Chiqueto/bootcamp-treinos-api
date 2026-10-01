@@ -1,7 +1,10 @@
 export class NotFoundError extends Error {
-  constructor(message: string) {
+  readonly code: string;
+
+  constructor(message: string, code = "NOT_FOUND") {
     super(message);
     this.name = "NotFoundError";
+    this.code = code;
   }
 }
 
@@ -197,5 +200,33 @@ export class InconsistentPlanningStateError extends ConflictError {
     this.name = "InconsistentPlanningStateError";
   }
 }
+
+export class InvalidCursorError extends Error {
+  readonly code = "INVALID_CURSOR";
+
+  constructor(message = "Cursor de paginação inválido ou corrompido.") {
+    super(message);
+    this.name = "InvalidCursorError";
+  }
+}
+
+export class InvalidTimezoneError extends Error {
+  readonly code = "INVALID_TIMEZONE";
+
+  constructor(message = "Timezone IANA inválido.") {
+    super(message);
+    this.name = "InvalidTimezoneError";
+  }
+}
+
+export class InvalidDateRangeError extends Error {
+  readonly code = "INVALID_DATE_RANGE";
+
+  constructor(message = "Intervalo de datas inválido.") {
+    super(message);
+    this.name = "InvalidDateRangeError";
+  }
+}
+
 
 

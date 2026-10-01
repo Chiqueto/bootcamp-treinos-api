@@ -256,6 +256,7 @@ export async function createTestSessionExercise(
     id?: string;
     exerciseNameSnapshot?: string;
     order?: number;
+    plannedWarmupSets?: number | null;
     plannedSets?: number | null;
     plannedReps?: number | null;
     plannedRestTimeInSeconds?: number | null;
@@ -269,6 +270,7 @@ export async function createTestSessionExercise(
       workoutSessionId,
       exerciseNameSnapshot: override?.exerciseNameSnapshot ?? "Supino Reto",
       order: override?.order ?? 1,
+      plannedWarmupSets: override?.plannedWarmupSets !== undefined ? override.plannedWarmupSets : null,
       plannedSets: override?.plannedSets ?? 3,
       plannedReps: override?.plannedReps ?? 10,
       plannedRestTimeInSeconds: override?.plannedRestTimeInSeconds ?? 60,

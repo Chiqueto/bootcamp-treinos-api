@@ -11,6 +11,7 @@ import {
 
 import { aiRoutes } from "../routes/ai.js";
 import { exerciseRoutes } from "../routes/exercise.js";
+import { historyRoutes } from "../routes/history.js";
 import { homeRoutes } from "../routes/home.js";
 import { meRoutes } from "../routes/me.js";
 import { periodizationRoutes } from "../routes/periodization.js";
@@ -49,6 +50,7 @@ await app.register(meRoutes, { prefix: "/me" });
 await app.register(aiRoutes, { prefix: "/ai" });
 await app.register(exerciseRoutes, { prefix: "/exercises" });
 await app.register(workoutSessionRoutes);
+await app.register(historyRoutes, { prefix: "/history" });
 
 await app.ready();
 const swaggerSpec = app.swagger();

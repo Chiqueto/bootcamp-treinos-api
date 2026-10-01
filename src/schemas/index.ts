@@ -5,7 +5,10 @@ import {
   MuscleRole,
   SetType,
   WeekDay,
+  WorkoutSessionOrigin,
 } from "../generated/prisma/enums.js";
+
+export const WorkoutSessionOriginSchema = z.enum(WorkoutSessionOrigin);
 
 export const ErrorSchema = z.object({
   error: z.string(),
@@ -105,8 +108,6 @@ export const SessionExerciseResponseSchema = z.object({
   plannedReps: z.number().nullable(),
   plannedRestTimeInSeconds: z.number().nullable(),
 });
-
-export const WorkoutSessionOriginSchema = z.enum(["PLANNED", "FREE"]);
 
 export const StartWorkoutSessionResponseSchema = z.object({
   userWorkoutSessionId: z.uuid(),
@@ -777,6 +778,242 @@ export const CreateAiConversationResponseSchema = z.object({
 export const AiConversationParamsSchema = z.object({
   id: z.uuid(),
 });
+
+// ==========================================
+// History API Schemas (Task 3.2)
+// ==========================================
+
+export const HistorySessionOriginSchema = z.enum(["PLANNED", "FREE"]);
+
+export const ListWorkoutHistoryQuerySchema = z.object({
+  cursor: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(50).default(15),
+  origin: HistorySessionOriginSchema.optional(),
+});
+
+export const HistoryTimelineItemSchema = z.object({
+  id: z.uuid(),
+  origin: HistorySessionOriginSchema,
+  startedAt: z.string(),
+  completedAt: z.string(),
+  durationInSeconds: z.number().int().min(0),
+  workoutPlanId: z.uuid().nullable(),
+  workoutPlanNameSnapshot: z.string().nullable(),
+  workoutDayNameSnapshot: z.string().nullable(),
+  exercisesCount: z.number().int().min(0),
+  workingSetsCount: z.number().int().min(0),
+  warmupSetsCount: z.number().int().min(0),
+  totalLoadVolumeGrams: z.number().int().min(0),
+  totalLoadVolumeKg: z.number().min(0),
+});
+
+export const ListWorkoutHistoryResponseSchema = z.object({
+  items: z.array(HistoryTimelineItemSchema),
+  nextCursor: z.string().nullable(),
+  hasMore: z.boolean(),
+});
+
+export const GetWorkoutHistorySessionParamsSchema = z.object({
+  sessionId: z.uuid(),
+});
+
+export const HistorySetDetailSchema = z.object({
+  id: z.uuid(),
+  order: z.number().int(),
+  type: z.enum(["WARMUP", "WORKING"]),
+  weightInGrams: z.number().int().nullable(),
+  reps: z.number().int().nullable(),
+  rir: z.number().int().nullable(),
+  durationInSeconds: z.number().int().nullable(),
+  notes: z.string().nullable(),
+  completedAt: z.string(),
+});
+
+export const HistoryExerciseDetailSchema = z.object({
+  id: z.uuid(),
+  exerciseId: z.uuid().nullable(),
+  exerciseNameSnapshot: z.string(),
+  order: z.number().int(),
+  notes: z.string().nullable(),
+  planned: z.object({
+    warmupSets: z.number().int().nullable(),
+    workingSets: z.number().int().nullable(),
+    reps: z.number().int().nullable(),
+    restTimeInSeconds: z.number().int().nullable(),
+  }),
+  performed: z.object({
+    warmupSetsCount: z.number().int().min(0),
+    workingSetsCount: z.number().int().min(0),
+    loadVolumeGrams: z.number().int().min(0),
+    loadVolumeKg: z.number().min(0),
+  }),
+  sets: z.array(HistorySetDetailSchema),
+});
+
+export const GetWorkoutHistorySessionResponseSchema = z.object({
+  id: z.uuid(),
+  origin: HistorySessionOriginSchema,
+  startedAt: z.string(),
+  completedAt: z.string(),
+  durationInSeconds: z.number().int().min(0),
+  workoutPlanId: z.uuid().nullable(),
+  workoutPlanNameSnapshot: z.string().nullable(),
+  workoutDayNameSnapshot: z.string().nullable(),
+  summary: z.object({
+    exercisesCount: z.number().int().min(0),
+    workingSetsCount: z.number().int().min(0),
+    warmupSetsCount: z.number().int().min(0),
+    totalLoadVolumeGrams: z.number().int().min(0),
+    totalLoadVolumeKg: z.number().min(0),
+  }),
+  exercises: z.array(HistoryExerciseDetailSchema),
+});
+
+export const GetExerciseEvolutionParamsSchema = z.object({
+  exerciseId: z.uuid(),
+});
+
+export const GetExerciseEvolutionQuerySchema = z.object({
+  cursor: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+});
+
+export const ExerciseEvolutionMuscleSchema = z.object({
+  muscleGroup: MuscleGroupSchema,
+  role: MuscleRoleSchema,
+});
+
+export const ExerciseEvolutionExerciseSchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  ownerUserId: z.string().nullable(),
+  muscles: z.array(ExerciseEvolutionMuscleSchema),
+});
+
+export const ExerciseLoadPRSchema = z.object({
+  weightInGrams: z.number().int().min(0),
+  weightKg: z.number().min(0),
+  reps: z.number().int().nullable(),
+  rir: z.number().int().nullable(),
+  completedAt: z.string(),
+  workoutSessionId: z.uuid(),
+  sessionExerciseId: z.uuid(),
+  workoutSetId: z.uuid(),
+  origin: HistorySessionOriginSchema,
+  workoutPlanNameSnapshot: z.string().nullable(),
+  workoutDayNameSnapshot: z.string().nullable(),
+});
+
+export const ExerciseEvolutionSetSchema = z.object({
+  id: z.uuid(),
+  sessionExerciseId: z.uuid(),
+  order: z.number().int(),
+  weightInGrams: z.number().int().nullable(),
+  weightKg: z.number().nullable(),
+  reps: z.number().int().nullable(),
+  rir: z.number().int().nullable(),
+  durationInSeconds: z.number().int().nullable(),
+  notes: z.string().nullable(),
+  completedAt: z.string(),
+});
+
+export const ExerciseEvolutionTopSetSchema = z.object({
+  workoutSetId: z.uuid(),
+  weightInGrams: z.number().int().nullable(),
+  weightKg: z.number().nullable(),
+  reps: z.number().int().nullable(),
+  rir: z.number().int().nullable(),
+});
+
+export const ExerciseEvolutionItemSchema = z.object({
+  workoutSessionId: z.uuid(),
+  startedAt: z.string(),
+  completedAt: z.string(),
+  origin: HistorySessionOriginSchema,
+  workoutPlanNameSnapshot: z.string().nullable(),
+  workoutDayNameSnapshot: z.string().nullable(),
+  exerciseNameSnapshot: z.string(),
+  workingSetsCount: z.number().int().min(0),
+  totalReps: z.number().int().min(0),
+  loadVolumeGrams: z.number().int().min(0),
+  loadVolumeKg: z.number().min(0),
+  topSet: ExerciseEvolutionTopSetSchema.nullable(),
+  sets: z.array(ExerciseEvolutionSetSchema),
+});
+
+export const GetExerciseEvolutionResponseSchema = z.object({
+  exercise: ExerciseEvolutionExerciseSchema,
+  loadPR: ExerciseLoadPRSchema.nullable(),
+  items: z.array(ExerciseEvolutionItemSchema),
+  nextCursor: z.string().nullable(),
+  hasMore: z.boolean(),
+});
+
+// ==========================================
+// Analytics API Schemas (Task 3.4)
+// ==========================================
+
+export const WeeklyAnalyticsItemSchema = z.object({
+  weekStartDate: z.string(),
+  weekEndDate: z.string(),
+  workoutsCompleted: z.number().int().min(0),
+  workingSets: z.number().int().min(0),
+  warmupSets: z.number().int().min(0),
+  loadVolumeGrams: z.number().int().min(0),
+  loadVolumeKg: z.number().min(0),
+  totalDurationInSeconds: z.number().int().min(0),
+  averageDurationInSeconds: z.number().min(0),
+});
+
+export const WeeklyAnalyticsResponseSchema = z.object({
+  startDate: z.string(),
+  endDate: z.string(),
+  timezone: z.string(),
+  weeks: z.array(WeeklyAnalyticsItemSchema),
+});
+export const GetWeeklyAnalyticsResponseSchema = WeeklyAnalyticsResponseSchema;
+
+export const WeeklyAnalyticsQuerySchema = z.object({
+  tz: z.string(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  weeksCount: z.coerce.number().int().min(1).max(52).optional(),
+});
+export const GetWeeklyAnalyticsQuerySchema = WeeklyAnalyticsQuerySchema;
+
+export const MuscleAnalyticsItemSchema = z.object({
+  muscleGroup: MuscleGroupSchema,
+  directWorkingSets: z.number().int().min(0),
+  indirectWorkingSets: z.number().int().min(0),
+});
+
+export const MuscleAnalyticsResponseSchema = z.object({
+  startDate: z.string(),
+  endDate: z.string(),
+  timezone: z.string(),
+  totalWorkingSets: z.number().int().min(0),
+  classifiedWorkingSets: z.number().int().min(0),
+  unclassifiedWorkingSets: z.number().int().min(0),
+  muscles: z.array(MuscleAnalyticsItemSchema),
+});
+export const GetMuscleAnalyticsResponseSchema = MuscleAnalyticsResponseSchema;
+
+export const MuscleAnalyticsQuerySchema = z.object({
+  tz: z.string(),
+  startDate: z.string(),
+  endDate: z.string(),
+});
+export const GetMuscleAnalyticsQuerySchema = MuscleAnalyticsQuerySchema;
+
+export type WeeklyAnalyticsItem = z.infer<typeof WeeklyAnalyticsItemSchema>;
+export type WeeklyAnalyticsResponse = z.infer<typeof WeeklyAnalyticsResponseSchema>;
+export type WeeklyAnalyticsQuery = z.infer<typeof WeeklyAnalyticsQuerySchema>;
+
+export type MuscleAnalyticsItem = z.infer<typeof MuscleAnalyticsItemSchema>;
+export type MuscleAnalyticsResponse = z.infer<typeof MuscleAnalyticsResponseSchema>;
+export type MuscleAnalyticsQuery = z.infer<typeof MuscleAnalyticsQuerySchema>;
+
+
 
 
 
