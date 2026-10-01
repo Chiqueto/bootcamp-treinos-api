@@ -13,7 +13,7 @@
 
 **Saída alcançada:** Dois usuários utilizam o sistema com isolamento completo e sem qualquer interferência mútua. Base homologada e pronta para a Fase 1.
 
-## Fase 1 — Tracker real
+## Fase 1 — Tracker Real [CONCLUÍDA] ✅
 
 - catálogo `Exercise`;
 - `SessionExercise`;
@@ -21,25 +21,39 @@
 - carga/reps/RIR;
 - isometria;
 - notas;
-- UI rápida para série.
+- UI rápida para série;
+- Treino avulso (`FreeWorkoutSession`).
 
-**Saída:** treino completo sem planilha externa.
+**Saída alcançada:** Registro completo da sessão de treino em tempo real com integridade transacional e snapshot imutável.
 
-## Fase 2 — Histórico/evolução
+## Fase 2 — Planning & Periodization [CONCLUÍDA] ✅
 
-- histórico por exercício;
-- últimas cargas;
-- volume;
-- PRs;
-- RIR;
-- recovery feedback.
+- [x] Task 2.1A, 2.1B, 2.1C: Modelagem, persistência e hardening de integridade da `Periodization` e `PeriodizationPlan`;
+- [x] Task 2.2: Ciclo de vida e duplicação atômica de `WorkoutPlan` (ativação/desativação/duplicação);
+- [x] Task 2.3A, 2.3B: Composição e ciclo de vida da `Periodization` (ativação, pausa, retomada, avanço e conclusão);
+- [x] Task 2.4, 2.4B: Planning Overview API (`/planning/overview`) com agregação de `activeContext`, planos e periodizações;
+- [x] Task 2.5A, 2.5B1, 2.5B2: Hub de Planejamento frontend (`/planning`), editores de plano e periodização, navegação completa;
+- [x] Task 2.6: IA de Planejamento V1 (Coach AI) integrada ao domínio:
+  - lê planejamento e contexto atual (`getPlanningOverview`, `getWorkoutPlan`, `getPeriodization`);
+  - propõe planos de 7 dias e periodizações sem persistir no banco (`proposeWorkoutPlan`, `proposePeriodization`);
+  - salva exclusivamente como rascunho inativo (`activate: false`, `isActive: false`);
+  - persistência atômica de periodização com rollback garantido (`CreatePeriodizationDraftFromAI`);
+  - não ativa, não desativa, não avança e não conclui planos ou periodizações;
+  - não utiliza histórico de performance;
+  - não possui RAG/PDF;
+- [x] Task 2.7: Approval Hardening determinístico (`needsApproval: true`), idempotência contra replay, auditoria geral e readiness.
 
-## Fase 3 — PWA
+**Saída alcançada:** Hub completo de planejamento onde o usuário gerencia planos standalone, ciclos macro de periodização e interage com o Coach AI de forma estritamente consentida.
 
-- manifest;
-- ícones;
-- instalação;
-- revisão mobile.
+## Fase 3 — Histórico & Evolução [PRÓXIMA FASE]
+
+Fronteiras e escopo previsto:
+- sessões executadas e histórico temporal;
+- histórico por exercício e evolução de carga;
+- carga / reps / RIR / volume por grupo muscular;
+- recordes pessoais (PRs);
+- evolução temporal de rendimento;
+- comparação planejado vs executado (planned vs performed).
 
 ## Fase 4 — Biblioteca
 

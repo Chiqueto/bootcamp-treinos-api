@@ -1,22 +1,24 @@
 import "dotenv/config";
+
 import fs from "node:fs";
 import path from "node:path";
-import Fastify from "fastify";
+
 import fastifySwagger from "@fastify/swagger";
+import Fastify from "fastify";
 import {
   jsonSchemaTransform,
   serializerCompiler,
   validatorCompiler,
 } from "fastify-type-provider-zod";
 
-import { WorkoutPlanRoutes } from "../routes/workout-plan.js";
-import { periodizationRoutes } from "../routes/periodization.js";
-import { planningRoutes } from "../routes/planning.js";
-import { homeRoutes } from "../routes/home.js";
-import { statsRoutes } from "../routes/stats.js";
-import { meRoutes } from "../routes/me.js";
 import { aiRoutes } from "../routes/ai.js";
 import { exerciseRoutes } from "../routes/exercise.js";
+import { homeRoutes } from "../routes/home.js";
+import { meRoutes } from "../routes/me.js";
+import { periodizationRoutes } from "../routes/periodization.js";
+import { planningRoutes } from "../routes/planning.js";
+import { statsRoutes } from "../routes/stats.js";
+import { WorkoutPlanRoutes } from "../routes/workout-plan.js";
 import { workoutSessionRoutes } from "../routes/workout-session.js";
 
 const app = Fastify();
