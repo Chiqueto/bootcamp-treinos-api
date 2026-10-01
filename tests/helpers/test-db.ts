@@ -120,11 +120,26 @@ export async function createTestExercise(override?: {
   ownerUserId?: string | null;
 }) {
   const uid = crypto.randomUUID().slice(0, 8);
+  const name = override?.name ?? `Supino Reto ${uid}`;
+  const ownerUserId = override?.ownerUserId ?? null;
+
+  if (ownerUserId === null) {
+    const existing = await prisma.exercise.findFirst({
+      where: {
+        ownerUserId: null,
+        name: { equals: name, mode: "insensitive" },
+      },
+    });
+    if (existing) {
+      return existing;
+    }
+  }
+
   const exercise = await prisma.exercise.create({
     data: {
       id: override?.id ?? crypto.randomUUID(),
-      name: override?.name ?? `Supino Reto ${uid}`,
-      ownerUserId: override?.ownerUserId ?? null,
+      name,
+      ownerUserId,
     },
   });
   createdTestExerciseIds.push(exercise.id);
@@ -140,7 +155,10 @@ export async function cleanupTestExercises(exerciseIds: string[]) {
     where: { exerciseId: { in: exerciseIds } },
   });
   await prisma.exercise.deleteMany({
-    where: { id: { in: exerciseIds } },
+    where: {
+      id: { in: exerciseIds },
+      ownerUserId: { not: null },
+    },
   });
 }
 
@@ -150,6 +168,7 @@ export async function createTestWorkoutExercise(
     id?: string;
     name?: string;
     order?: number;
+    warmupSets?: number;
     sets?: number;
     reps?: number;
     restTimeInSeconds?: number;
@@ -162,6 +181,7 @@ export async function createTestWorkoutExercise(
       workoutDayId,
       name: override?.name ?? "Exercício Teste",
       order: override?.order ?? 0,
+      warmupSets: override?.warmupSets ?? 0,
       sets: override?.sets ?? 3,
       reps: override?.reps ?? 10,
       restTimeInSeconds: override?.restTimeInSeconds ?? 60,

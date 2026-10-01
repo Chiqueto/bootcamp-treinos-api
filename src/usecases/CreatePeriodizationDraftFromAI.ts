@@ -1,3 +1,4 @@
+import { resolveCanonicalExerciseMap } from "../domain/canonical-exercise.js";
 import { ValidationError } from "../errors/index.js";
 import { WeekDay } from "../generated/prisma/enums.js";
 import { prisma } from "../lib/db.js";
@@ -19,6 +20,7 @@ export interface CreatePeriodizationDraftFromAIInput {
         exercises: Array<{
           order: number;
           name: string;
+          warmupSets?: number;
           sets: number;
           reps: number;
           restTimeInSeconds: number;
@@ -152,9 +154,15 @@ export class CreatePeriodizationDraftFromAI {
                 `Nome do exercício é obrigatório (bloco ${i + 1}, ${day.weekDay}).`,
               );
             }
-            if (ex.sets < 1 || ex.reps < 1 || ex.restTimeInSeconds < 0) {
+            if (
+              ex.sets < 1 ||
+              ex.reps < 1 ||
+              ex.restTimeInSeconds < 0 ||
+              (ex.warmupSets !== undefined &&
+                (ex.warmupSets < 0 || !Number.isInteger(ex.warmupSets)))
+            ) {
               throw new ValidationError(
-                `Valores de séries, repetições e descanso inválidos no exercício ${ex.name}.`,
+                `Valores de séries, repetições, descanso ou aquecimento inválidos no exercício ${ex.name}.`,
               );
             }
           }
@@ -174,6 +182,15 @@ export class CreatePeriodizationDraftFromAI {
           startedAt: null,
           completedAt: null,
         },
+      });
+
+      const allExerciseNames = dto.blocks.flatMap((b) =>
+        b.plan.workoutDays.flatMap((wd) => wd.exercises.map((e) => e.name)),
+      );
+      const canonicalExerciseMap = await resolveCanonicalExerciseMap({
+        userId: dto.userId,
+        names: allExerciseNames,
+        tx,
       });
 
       const createdBlocks = [];
@@ -201,9 +218,14 @@ export class CreatePeriodizationDraftFromAI {
                     id: crypto.randomUUID(),
                     name: ex.name.trim(),
                     order: ex.order,
+                    warmupSets: ex.warmupSets ?? 0,
                     sets: ex.sets,
                     reps: ex.reps,
                     restTimeInSeconds: ex.restTimeInSeconds,
+                    exerciseId:
+                      canonicalExerciseMap.get(ex.name.trim()) ??
+                      canonicalExerciseMap.get(ex.name) ??
+                      null,
                   })),
                 },
               })),

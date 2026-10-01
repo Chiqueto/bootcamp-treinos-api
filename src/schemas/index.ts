@@ -1,6 +1,11 @@
 import z from "zod";
 
-import { SetType, WeekDay } from "../generated/prisma/enums.js";
+import {
+  MuscleGroup,
+  MuscleRole,
+  SetType,
+  WeekDay,
+} from "../generated/prisma/enums.js";
 
 export const ErrorSchema = z.object({
   error: z.string(),
@@ -11,6 +16,7 @@ export const WorkoutExerciseSchema = z.object({
   order: z.number().min(0),
   name: z.string().trim().min(1),
   sets: z.number().min(1),
+  warmupSets: z.number().int().min(0).default(0),
   reps: z.number().min(1),
   restTimeInSeconds: z.number().min(1),
 });
@@ -95,6 +101,7 @@ export const SessionExerciseResponseSchema = z.object({
   exerciseNameSnapshot: z.string(),
   order: z.number(),
   plannedSets: z.number().nullable(),
+  plannedWarmupSets: z.number().nullable().optional(),
   plannedReps: z.number().nullable(),
   plannedRestTimeInSeconds: z.number().nullable(),
 });
@@ -165,6 +172,7 @@ export const GetWorkoutDayResponseSchema = z.object({
       order: z.number(),
       workoutDayId: z.uuid(),
       sets: z.number(),
+      warmupSets: z.number().default(0),
       reps: z.number(),
       restTimeInSeconds: z.number(),
     }),
@@ -238,6 +246,7 @@ export const ListWorkoutPlansResponseSchema = z.object({
               name: z.string(),
               order: z.number(),
               workoutDayId: z.uuid(),
+              warmupSets: z.number().default(0),
               sets: z.number(),
               reps: z.number(),
               restTimeInSeconds: z.number(),
@@ -365,6 +374,7 @@ export const WorkoutSessionExerciseResponseSchema = z.object({
   exerciseNameSnapshot: z.string(),
   order: z.number().int(),
   plannedSets: z.number().int().nullable(),
+  plannedWarmupSets: z.number().int().nullable().optional(),
   plannedReps: z.number().int().nullable(),
   plannedRestTimeInSeconds: z.number().int().nullable(),
   notes: z.string().nullable(),
@@ -402,10 +412,20 @@ export const StartFreeWorkoutSessionResponseSchema = z.object({
   completedAt: z.string().nullable(),
 });
 
+export const MuscleGroupSchema = z.enum(MuscleGroup);
+export const MuscleRoleSchema = z.enum(MuscleRole);
+
+export const ExerciseMuscleResponseSchema = z.object({
+  id: z.uuid(),
+  muscleGroup: MuscleGroupSchema,
+  role: MuscleRoleSchema,
+});
+
 export const ExerciseResponseSchema = z.object({
   id: z.uuid(),
   name: z.string(),
   ownerUserId: z.string().nullable(),
+  muscles: z.array(ExerciseMuscleResponseSchema).default([]),
 });
 
 export const ListExercisesQuerySchema = z.object({
@@ -414,6 +434,19 @@ export const ListExercisesQuerySchema = z.object({
 
 export const CreateExerciseBodySchema = z.object({
   name: z.string().min(1),
+  primaryMuscleGroups: z.array(MuscleGroupSchema).optional(),
+  secondaryMuscleGroups: z.array(MuscleGroupSchema).optional(),
+});
+
+export const UpdateExerciseMusclesParamsSchema = z.object({
+  id: z.uuid(),
+});
+
+export const UpdateExerciseMusclesBodySchema = z.object({
+  primaryMuscleGroups: z
+    .array(MuscleGroupSchema)
+    .min(1, "Pelo menos um grupo muscular primário é obrigatório"),
+  secondaryMuscleGroups: z.array(MuscleGroupSchema).optional(),
 });
 
 export const AddSessionExerciseParamsSchema = z.object({

@@ -33,6 +33,29 @@ enum WorkoutSessionOrigin {
   FREE
 }
 
+enum MuscleGroup {
+  CHEST
+  BACK
+  SHOULDERS
+  BICEPS
+  TRICEPS
+  FOREARMS
+
+  QUADRICEPS
+  HAMSTRINGS
+  GLUTES
+  ADDUCTORS
+  HIP_ABDUCTORS
+  CALVES
+
+  CORE
+}
+
+enum MuscleRole {
+  PRIMARY
+  SECONDARY
+}
+
 model User {
   id                  String           @id
   workoutPlans        WorkoutPlan[]
@@ -133,8 +156,24 @@ model Exercise {
 
   workoutExercises WorkoutExercise[]
   sessionExercises SessionExercise[]
+  muscles          ExerciseMuscle[]
 
   @@index([ownerUserId, name])
+}
+
+model ExerciseMuscle {
+  id          String      @id @default(uuid())
+
+  exerciseId  String
+  exercise    Exercise    @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  muscleGroup MuscleGroup
+  role        MuscleRole
+
+  createdAt   DateTime    @default(now()) @db.Timestamptz()
+
+  @@unique([exerciseId, muscleGroup])
+  @@index([muscleGroup, role])
 }
 
 model WorkoutExercise {
@@ -144,6 +183,7 @@ model WorkoutExercise {
   workoutDayId      String
   workoutDay        WorkoutDay @relation(fields: [workoutDayId], references: [id])
   sets              Int
+  warmupSets        Int        @default(0)
   reps              Int
   restTimeInSeconds Int
   createdAt         DateTime   @default(now()) @db.Timestamptz()
@@ -194,6 +234,7 @@ model SessionExercise {
   order                   Int
 
   plannedSets              Int?
+  plannedWarmupSets        Int?
   plannedReps              Int?
   plannedRestTimeInSeconds Int?
 

@@ -344,3 +344,103 @@ Para evitar o padrão N+1 no frontend:
   - `GetActiveWorkoutSession`: Preservado retornando dados íntegros e snapshots.
   - Schemas HTTP: `WorkoutSessionOriginSchema` criado e acoplado de forma compatível e aditiva.
 
+### Task 3.1C — Catálogo de Grupos Musculares & Resolução Canônica
+- **Status:** `3.1C IMPLEMENTADA`
+- **Data:** 2026-10-01
+- **Migration criada:** `prisma/migrations/20261001140000_task3_1c_exercise_muscles/migration.sql`
+- **Taxonomia Adotada:**
+  - `enum MuscleGroup`: `CHEST`, `BACK`, `SHOULDERS`, `BICEPS`, `TRICEPS`, `FOREARMS`, `QUADRICEPS`, `HAMSTRINGS`, `GLUTES`, `ADDUCTORS`, `HIP_ABDUCTORS`, `CALVES`, `CORE` (13 grupos anatômicos moderados).
+  - `enum MuscleRole`: `PRIMARY` (estímulo direto), `SECONDARY` (estímulo indireto).
+  - Modelo `ExerciseMuscle`: `(id, exerciseId, muscleGroup, role, createdAt)` com constraint única `@@unique([exerciseId, muscleGroup])` e índice composto `@@index([muscleGroup, role])`.
+- **Regras de Negócio e Validação:**
+  - Um exercício classificado deve possuir pelo menos 1 grupo `PRIMARY`.
+  - O domínio aceita múltiplos grupos `PRIMARY` (ex: Agachamento Livre com `QUADRICEPS` e `GLUTES` como `PRIMARY`).
+  - O mesmo músculo é impedido de figurar simultaneamente como `PRIMARY` e `SECONDARY`.
+  - Duplicatas de grupos no mesmo papel são sanitizadas/deduplicadas automaticamente.
+  - Exercícios sem relações (`muscles = []`) representam conceitualmente `UNCLASSIFIED`.
+- **Inventário de Exercícios e Taxas de Nulidade Auditadas:**
+  - **TEST (`TEST_DATABASE_URL`):**
+    - Total de Exercícios: 26 (0 globais, 26 customizados do usuário).
+    - `WorkoutExercise.exerciseId`: 80 total, 54 nulos, 26 vinculados (67,50% nulos).
+    - `SessionExercise.exerciseId`: 0 registros.
+  - **PRODUÇÃO (`DATABASE_URL`):**
+    - Total de Exercícios: 28 (0 globais, 28 customizados do usuário).
+    - `WorkoutExercise.exerciseId`: 80 total, 54 nulos, 26 vinculados (67,50% nulos).
+    - `SessionExercise.exerciseId`: 9 total, 7 nulos, 2 vinculados (77,78% nulos).
+- **Catálogo Global e Sincronização:**
+  - Mapeamento determinístico versionado em código (`GLOBAL_EXERCISE_MUSCLE_MAPPING` em `src/domain/muscle-taxonomy.ts`) cobrindo 27 exercícios padrão da musculação.
+  - Função `syncGlobalExerciseMuscles`: operação idempotente de catálogo que insere relações para exercícios globais conhecidos, sem duplicatas e que NUNCA altera exercícios de usuários.
+- **Estratégia de Resolução Canônica (`resolveCanonicalExerciseId`):**
+  - Igualdade exata sobre `LOWER(TRIM(name))`.
+  - Ordem estrita de prioridade:
+    1. Exercício personalizado do próprio usuário (`ownerUserId === userId`).
+    2. Exercício global do catálogo (`ownerUserId === null`).
+    3. Nenhum match $\rightarrow$ retorna `null`.
+  - NUNCA associa com exercícios de outros usuários.
+  - NUNCA utiliza correspondência fuzzy (evita vincular "Agachamento" a "Agachamento Búlgaro").
+  - Integrado em `CreateWorkoutPlan`, `CreateWorkoutPlanInPeriodization` e `CreatePeriodizationDraftFromAI`.
+  - Exercícios propostos pela IA sem correspondência exata permanecem com `exerciseId = null` (a IA não cria exercícios silenciosamente no catálogo).
+  - `DuplicateWorkoutPlan` preserva com fidelidade o `exerciseId` existente.
+- **Custom Exercises e Frontend:**
+  - `CreateExercise` atualizado para receber `primaryMuscleGroups` e `secondaryMuscleGroups`.
+  - Novo endpoint `PUT /exercises/:id/muscles` com use case `UpdateExerciseMuscles` realizando substituição atômica dentro de transação e checagem estrita de ownership (retorna 404 para exercícios globais ou de terceiros).
+  - Modal de seleção de exercícios (`ExerciseSelectorModal`) exibe grupos musculares em português via helper centralizado (`app/_lib/muscle-labels.ts`).
+  - Exercícios legados sem músculos exibem discretamente "Sem classificação" com acionador "Classificar".
+  - Formulário mobile simplificado: exige 1 `PRIMARY` e permite seleção dinâmica de `N SECONDARY`.
+- **Limitações e Decisões de Escopo:**
+  - Nesta task, não são computados volumes musculares nem expostos endpoints de analytics.
+  - A contagem futura tratará 1 working set em `PRIMARY` como 1 série direta e em `SECONDARY` como 1 série indireta (sem pesos decimais 0.5 / 0.3).
+  - Não foi criado snapshot de músculos em `SessionExercise` (analytics consultarão a relação atual `Exercise -> ExerciseMuscle`).
+
+### Task 3.1D — Catálogo Canônico Global & Backfill de Legado
+- **Status:** `3.1D IMPLEMENTADA`
+- **Data:** 2026-10-01
+- **Migration criada:** `prisma/migrations/20261001143000_task3_1d_canonical_catalog_backfill/migration.sql`
+- **Catálogo Global Oficial:**
+  - 33 exercícios canônicos padrão da musculação criados com `ownerUserId = NULL`.
+  - IDs determinísticos com UUIDs RFC 4122 v4 fixos e estáveis entre ambientes (`00000000-0000-4000-8000-000000000101` a `00000000-0000-4000-8000-000000000133`), garantindo rastreabilidade e integridade longitudinal.
+  - 71 relações `ExerciseMuscle` criadas deterministicamente com `PRIMARY` (estímulo direto) e `SECONDARY` (estímulo indireto).
+- **Estratégia de Rollout via Migration (Justificativa):**
+  - O catálogo canônico é domínio essencial do produto. Depender de `prisma db seed` manual pós-deploy introduz risco operacional e dependência humana.
+  - A inclusão direta dos dados de referência e do backfill em migration SQL transacional e idempotente assegura que a estrutura e os vínculos canônicos existam atomicamente logo após o pipeline de deploy (`prisma migrate deploy`).
+  - Totalmente idempotente através de `ON CONFLICT DO NOTHING` e `WHERE NOT EXISTS`.
+- **Classificação Segura de Custom Exercises Legados:**
+  - Exercícios customizados (`ownerUserId IS NOT NULL`) que possuíam 0 músculos e cujo nome coincidiu com exact-match normalizado (`LOWER(TRIM(c.name)) = LOWER(TRIM(g.name))`) receberam a classificação muscular oficial do catálogo.
+  - Exercícios customizados com classificação manual prévia (`muscles.length > 0`) foram mantidos 100% inalterados (precedência do usuário).
+  - A identidade (`id` e `ownerUserId`) de todos os exercícios customizados foi preservada (nenhum custom foi convertido em global).
+- **Backfill de `WorkoutExercise.exerciseId`:**
+  - Para registros legados onde `exerciseId IS NULL`:
+    1. Prioridade 1: Match exato normalizado com `Exercise` do próprio usuário criador do plano (`e.ownerUserId = wp.userId`).
+    2. Prioridade 2: Match exato normalizado com `Exercise` canônico global (`e.ownerUserId IS NULL`).
+    3. Sem match: Permanece `exerciseId = NULL`.
+  - Nenhuma alteração textual ou prescritiva em `name`, `sets`, `reps`, `warmupSets`, ordem ou dia.
+- **Backfill de `SessionExercise.exerciseId`:**
+  - Para registros legados de sessão onde `exerciseId IS NULL`:
+    1. Estratégia 1 (Preferencial): Herdar de `sourceWorkoutExercise.exerciseId` se este já estiver resolvido.
+    2. Estratégia 2 (Fallback seguro): Match exato normalizado contra `Exercise` próprio do atleta da sessão ou global.
+    3. Sem match: Permanece `exerciseId = NULL`.
+  - Imutabilidade absoluta do histórico de execução (`exerciseNameSnapshot`, séries realizadas, cargas, RIR).
+- **Cobertura Canônica Auditada (Antes vs Depois):**
+  - **Ambiente TEST (`TEST_DATABASE_URL`):**
+    - Globais no banco: 0 $\rightarrow$ **33** (+33)
+    - Customizados com músculos: 0 / 26 (0%) $\rightarrow$ **26 / 26 (100%)**
+    - `WorkoutExercise`:
+      - Total: 80
+      - Vinculados (`exerciseId IS NOT NULL`): 26 (32,5%) $\rightarrow$ **47 (58,75%)**
+      - Nulos (`exerciseId IS NULL`): 54 (67,5%) $\rightarrow$ **33 (41,25%)**
+    - `SessionExercise`: Total 0 no banco de testes.
+    - Exercícios não resolvidos restantes (33 nomes): Variações específicas de periodização/IA sem correspondência exata no catálogo (ex: *"Puxada Alta"*, *"Leg Press"*, *"Remada Cavalinho"*, *"Salto em Caixa"*, *"Burpee"*, *"Levantamento Terra Sumô (leve)"*, etc.). Permanecem legitimamente nulos para não distorcer analytics futuros com falsos positivos.
+  - **Ambiente de PRODUÇÃO (`DATABASE_URL` — Leitura / Estimativa):**
+    - Globais no banco: 0 $\rightarrow$ 33 estimados após rollout.
+    - Customizados: 28 existentes (27 exact-matched com catálogo; 1 legítimo custom sem correspondência: *"Sissy squat"*).
+    - `WorkoutExercise` (80 total):
+      - Antes: 26 vinculados, 54 nulos (67,5% nulos).
+      - Estimativa após: 35 vinculados (+9 matches exatos com custom dos usuários), 45 nulos (56,25% nulos).
+    - `SessionExercise` (9 total):
+      - Antes: 2 vinculados, 7 nulos (77,78% nulos).
+      - Estimativa após: 4 vinculados (+2 via `sourceWorkoutExercise`), 5 nulos (55,56% nulos).
+    - **Regra de Produção Cumprida:** Nenhuma migration ou mutação executada contra produção nesta task.
+- **Garantia para Novos Planos:**
+  - Use cases `CreateWorkoutPlan`, `CreateWorkoutPlanInPeriodization` e `CreatePeriodizationDraftFromAI` utilizam `resolveCanonicalExerciseId` / `resolveCanonicalExerciseMap`, resolvendo automaticamente contra custom ou catálogo global durante a criação.
+
+

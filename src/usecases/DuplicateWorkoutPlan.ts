@@ -24,6 +24,7 @@ interface OutputDto {
       name: string;
       order: number;
       sets: number;
+      warmupSets: number;
       reps: number;
       restTimeInSeconds: number;
       exerciseId: string | null;
@@ -75,6 +76,7 @@ export class DuplicateWorkoutPlan {
                   name: ex.name,
                   order: ex.order,
                   sets: ex.sets,
+                  warmupSets: ex.warmupSets,
                   reps: ex.reps,
                   restTimeInSeconds: ex.restTimeInSeconds,
                   exerciseId: ex.exerciseId, // Preserva vínculo canônico sem duplicar Exercise
@@ -111,6 +113,7 @@ export class DuplicateWorkoutPlan {
             name: ex.name,
             order: ex.order,
             sets: ex.sets,
+            warmupSets: ex.warmupSets,
             reps: ex.reps,
             restTimeInSeconds: ex.restTimeInSeconds,
             exerciseId: ex.exerciseId,

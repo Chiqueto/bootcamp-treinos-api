@@ -15,6 +15,7 @@ interface OutputDto {
   id: string;
   exerciseNameSnapshot: string;
   order: number;
+  plannedWarmupSets?: number | null;
   plannedSets: number | null;
   plannedReps: number | null;
   plannedRestTimeInSeconds: number | null;
@@ -81,6 +82,7 @@ export class AddExerciseToWorkoutSession {
       id: created.id,
       exerciseNameSnapshot: created.exerciseNameSnapshot,
       order: created.order,
+      plannedWarmupSets: null,
       plannedSets: null,
       plannedReps: null,
       plannedRestTimeInSeconds: null,

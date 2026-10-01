@@ -1,3 +1,4 @@
+import { resolveCanonicalExerciseMap } from "../domain/canonical-exercise.js";
 import {
   NotFoundError,
   PeriodizationCompletedError,
@@ -19,6 +20,7 @@ interface InputDto {
     exercises: Array<{
       order: number;
       name: string;
+      warmupSets?: number;
       sets: number;
       reps: number;
       restTimeInSeconds: number;
@@ -54,6 +56,7 @@ interface OutputDto {
       exercises: Array<{
         order: number;
         name: string;
+        warmupSets: number;
         sets: number;
         reps: number;
         restTimeInSeconds: number;
@@ -112,6 +115,15 @@ export class CreateWorkoutPlanInPeriodization {
         );
       }
 
+      const allExerciseNames = dto.workoutDays.flatMap((day) =>
+        day.exercises.map((e) => e.name),
+      );
+      const canonicalExerciseMap = await resolveCanonicalExerciseMap({
+        userId: dto.userId,
+        names: allExerciseNames,
+        tx,
+      });
+
       const workoutPlan = await tx.workoutPlan.create({
         data: {
           id: crypto.randomUUID(),
@@ -129,9 +141,11 @@ export class CreateWorkoutPlanInPeriodization {
                 create: workoutDay.exercises.map((exercise) => ({
                   order: exercise.order,
                   name: exercise.name,
+                  warmupSets: exercise.warmupSets ?? 0,
                   sets: exercise.sets,
                   reps: exercise.reps,
                   restTimeInSeconds: exercise.restTimeInSeconds,
+                  exerciseId: canonicalExerciseMap.get(exercise.name) ?? null,
                 })),
               },
             })),
@@ -195,6 +209,7 @@ export class CreateWorkoutPlanInPeriodization {
             exercises: day.exercises.map((exercise) => ({
               order: exercise.order,
               name: exercise.name,
+              warmupSets: exercise.warmupSets,
               sets: exercise.sets,
               reps: exercise.reps,
               restTimeInSeconds: exercise.restTimeInSeconds,

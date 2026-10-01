@@ -22,6 +22,7 @@ interface OutputDto {
     name: string;
     order: number;
     workoutDayId: string;
+    warmupSets: number;
     sets: number;
     reps: number;
     restTimeInSeconds: number;
@@ -68,6 +69,7 @@ export class GetWorkoutDay {
         name: exercise.name,
         order: exercise.order,
         workoutDayId: exercise.workoutDayId,
+        warmupSets: exercise.warmupSets,
         sets: exercise.sets,
         reps: exercise.reps,
         restTimeInSeconds: exercise.restTimeInSeconds,

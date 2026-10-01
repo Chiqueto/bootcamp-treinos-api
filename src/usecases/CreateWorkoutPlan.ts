@@ -1,3 +1,4 @@
+import { resolveCanonicalExerciseMap } from "../domain/canonical-exercise.js";
 import {
   ActivePeriodizationError,
   ConflictError,
@@ -21,6 +22,7 @@ interface InputDto {
       order: number;
       name: string;
       sets: number;
+      warmupSets?: number;
       reps: number;
       restTimeInSeconds: number;
     }>;
@@ -41,6 +43,7 @@ interface OutputDto {
       order: number;
       name: string;
       sets: number;
+      warmupSets: number;
       reps: number;
       restTimeInSeconds: number;
     }>;
@@ -78,32 +81,43 @@ export class CreateWorkoutPlan {
           });
         }
 
+        const allExerciseNames = dto.workoutDays.flatMap((day) =>
+          day.exercises.map((e) => e.name),
+        );
+        const canonicalExerciseMap = await resolveCanonicalExerciseMap({
+          userId: dto.userId,
+          names: allExerciseNames,
+          tx,
+        });
+
         const workoutPlan = await tx.workoutPlan.create({
           data: {
             id: crypto.randomUUID(),
             name: dto.name,
             userId: dto.userId,
             isActive: shouldActivate,
-          workoutDays: {
-            create: dto.workoutDays.map((workoutDay) => ({
-              name: workoutDay.name,
-              weekDay: workoutDay.weekDay,
-              isRest: workoutDay.isRest,
-              estimatedDurationInSeconds: workoutDay.estimatedDurationInSeconds,
-              coverImageUrl: workoutDay.coverImageUrl ?? null,
-              exercises: {
-                create: workoutDay.exercises.map((exercise) => ({
-                  order: exercise.order,
-                  name: exercise.name,
-                  sets: exercise.sets,
-                  reps: exercise.reps,
-                  restTimeInSeconds: exercise.restTimeInSeconds,
-                })),
-              },
-            })),
+            workoutDays: {
+              create: dto.workoutDays.map((workoutDay) => ({
+                name: workoutDay.name,
+                weekDay: workoutDay.weekDay,
+                isRest: workoutDay.isRest,
+                estimatedDurationInSeconds: workoutDay.estimatedDurationInSeconds,
+                coverImageUrl: workoutDay.coverImageUrl ?? null,
+                exercises: {
+                  create: workoutDay.exercises.map((exercise) => ({
+                    order: exercise.order,
+                    name: exercise.name,
+                    sets: exercise.sets,
+                    warmupSets: exercise.warmupSets ?? 0,
+                    reps: exercise.reps,
+                    restTimeInSeconds: exercise.restTimeInSeconds,
+                    exerciseId: canonicalExerciseMap.get(exercise.name) ?? null,
+                  })),
+                },
+              })),
+            },
           },
-        },
-      });
+        });
 
       const result = await tx.workoutPlan.findFirst({
         where: {
@@ -136,6 +150,7 @@ export class CreateWorkoutPlan {
               order: exercise.order,
               name: exercise.name,
               sets: exercise.sets,
+              warmupSets: exercise.warmupSets,
               reps: exercise.reps,
               restTimeInSeconds: exercise.restTimeInSeconds,
             })),

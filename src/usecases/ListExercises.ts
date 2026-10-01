@@ -1,4 +1,4 @@
-import { Prisma } from "../generated/prisma/client.js";
+import { MuscleGroup, MuscleRole, Prisma } from "../generated/prisma/client.js";
 import { prisma } from "../lib/db.js";
 
 interface InputDto {
@@ -10,6 +10,11 @@ interface ExerciseOutputDto {
   id: string;
   name: string;
   ownerUserId: string | null;
+  muscles: Array<{
+    id: string;
+    muscleGroup: MuscleGroup;
+    role: MuscleRole;
+  }>;
 }
 
 export class ListExercises {
@@ -32,6 +37,14 @@ export class ListExercises {
         id: true,
         name: true,
         ownerUserId: true,
+        muscles: {
+          select: {
+            id: true,
+            muscleGroup: true,
+            role: true,
+          },
+          orderBy: [{ role: "asc" }, { muscleGroup: "asc" }],
+        },
       },
     });
   }

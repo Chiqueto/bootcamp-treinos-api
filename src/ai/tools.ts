@@ -32,7 +32,19 @@ export const aiExerciseSchema = z.object({
     .string()
     .min(1)
     .describe("Nome do exercício (ex: Supino Reto com Barra)"),
-  sets: z.number().int().min(1).describe("Número de séries (ex: 3 ou 4)"),
+  warmupSets: z
+    .number()
+    .int()
+    .min(0)
+    .default(0)
+    .describe(
+      "Número de séries preparatórias/aquecimento (normalmente 1 a 3 nos primeiros compostos principais, 0 em exercícios subsequentes e isoladores)",
+    ),
+  sets: z
+    .number()
+    .int()
+    .min(1)
+    .describe("Número de séries válidas / de trabalho (ex: 3 ou 4)"),
   reps: z
     .number()
     .int()
