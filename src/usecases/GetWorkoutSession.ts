@@ -1,5 +1,5 @@
 import { NotFoundError } from "../errors/index.js";
-import { SetType } from "../generated/prisma/enums.js";
+import { SetType, WorkoutSessionOrigin } from "../generated/prisma/enums.js";
 import { prisma } from "../lib/db.js";
 
 interface InputDto {
@@ -32,7 +32,11 @@ export interface SessionExerciseOutputDto {
 
 export interface GetWorkoutSessionOutputDto {
   id: string;
+  origin?: WorkoutSessionOrigin;
   workoutDayId: string | null;
+  workoutPlanId?: string | null;
+  workoutPlanNameSnapshot?: string | null;
+  workoutDayNameSnapshot?: string | null;
   startedAt: string;
   completedAt: string | null;
   sessionExercises: SessionExerciseOutputDto[];
@@ -60,7 +64,11 @@ export class GetWorkoutSession {
 
     return {
       id: session.id,
+      origin: session.origin,
       workoutDayId: session.workoutDayId,
+      workoutPlanId: session.workoutPlanId,
+      workoutPlanNameSnapshot: session.workoutPlanNameSnapshot,
+      workoutDayNameSnapshot: session.workoutDayNameSnapshot,
       startedAt: session.startedAt.toISOString(),
       completedAt: session.completedAt ? session.completedAt.toISOString() : null,
       sessionExercises: session.sessionExercises.map((exercise) => ({

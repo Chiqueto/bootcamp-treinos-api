@@ -302,3 +302,45 @@ Para evitar o padrão N+1 no frontend:
    - Rota `/history`, scroll infinito, cards unificados de treinos planejados e avulsos, tela de detalhe com contraste planejado vs executado.
 7. **Task 3.6 — Frontend: Evolução e Métricas Musculares:**
    - Dashboard de evolução, gráficos semanais de volume, mapa/distribuição muscular e visualização de recordes pessoais (PRs).
+
+---
+
+## 12. Histórico de Execução e Status de Implementação
+
+### Task 3.1B — Persistência Histórica, Origem da Sessão e Snapshots
+- **Status:** `3.1B IMPLEMENTADA`
+- **Data:** 2026-10-01
+- **Migration criada:** `prisma/migrations/20261001120000_task3_1b_history_origin_snapshots/migration.sql`
+- **Campos efetivamente adotados:**
+  - `WorkoutSession.origin`: enum `WorkoutSessionOrigin { PLANNED, FREE }` (NOT NULL, sem `@default` em runtime/schema final para exigir declaração explícita na criação).
+  - `WorkoutSession.workoutPlanId`: `String?` (FK com `onDelete: SetNull` preservando a sessão histórica caso o plano seja excluído).
+  - `WorkoutSession.workoutPlanNameSnapshot`: `String?` (snapshot imutável do nome do plano no momento de início do treino).
+  - `WorkoutSession.workoutDayNameSnapshot`: `String?` (snapshot imutável do nome do dia no momento de início do treino).
+  - `WorkoutPlan.workoutSessions`: relação inversa tipada.
+- **Estratégia de Backfill e Execução Segura:**
+  1. Criação do enum `WorkoutSessionOrigin`.
+  2. Adição da coluna `origin` inicialmente nula, além de `workoutPlanId`, `workoutPlanNameSnapshot`, `workoutDayNameSnapshot`.
+  3. Preenchimento de sessões planejadas (`workoutDayId IS NOT NULL`):
+     - `origin = 'PLANNED'`
+     - Preenchimento de `workoutPlanId`, `workoutPlanNameSnapshot`, `workoutDayNameSnapshot` consultando `WorkoutDay` e `WorkoutPlan`.
+  4. Preenchimento de sessões avulsas (`workoutDayId IS NULL`):
+     - `origin = 'FREE'`
+  5. Alteração da coluna `origin` para `NOT NULL`.
+  6. Criação de Foreign Keys e Índices.
+- **Auditoria de Dados e Contagem do Backfill:**
+  - Ambiente de Teste (`TEST_DATABASE_URL`): 1 sessão total com `workoutDayId` $\rightarrow$ migrada para `PLANNED` com snapshots íntegros.
+  - Ambiente de Produção (`DATABASE_URL`): 3 sessões totais (1 planejada com `workoutDayId`, 2 com `workoutDayId IS NULL`). Migration mantida estritamente como **pendente** (não aplicada em produção conforme regra de release).
+- **Índices Criados:**
+  - `WorkoutSession_athleteId_completedAt_id_desc_idx`: Índice parcial `ON "WorkoutSession" ("athleteId", "completedAt" DESC, "id" DESC) WHERE "completedAt" IS NOT NULL;` para cursor pagination determinístico.
+  - `WorkoutSession_workoutPlanId_idx`: Índice para FK `WorkoutSession(workoutPlanId)`.
+  - `SessionExercise_exerciseId_workoutSessionId_idx`: Índice composto em `SessionExercise(exerciseId, workoutSessionId)` para histórico longitudinal por exercício.
+  - `WorkoutSet_sessionExerciseId_type_completedAt_idx`: Índice analítico em `WorkoutSet(sessionExerciseId, type, completedAt)` para agregações e filtros por tipo de série (com `type` posicionado para filtragem direta de séries efetivas `WORKING`).
+- **Limitação de Legado Documentada:**
+  - Caso histórico em que um `WorkoutDay` tenha sido deletado no passado (tornando `workoutDayId = NULL` por `SetNull`), a sessão é classificada como `FREE` no backfill, pois sem audit trail prévio não há base para distinguir de um treino livre genuíno.
+- **Use Cases Atualizados:**
+  - `StartWorkoutSession`: Valida integridade e ownership de `WorkoutDay` e `WorkoutPlan`, define `origin: PLANNED`, `workoutPlanId`, e snapshots imutáveis.
+  - `StartFreeWorkoutSession`: Define explicitamente `origin: FREE` com contexto e snapshots nulos.
+  - `GetWorkoutSession`: DTO atualizado de forma aditiva para expor `origin`, `workoutPlanId`, `workoutPlanNameSnapshot`, `workoutDayNameSnapshot`.
+  - `GetActiveWorkoutSession`: Preservado retornando dados íntegros e snapshots.
+  - Schemas HTTP: `WorkoutSessionOriginSchema` criado e acoplado de forma compatível e aditiva.
+

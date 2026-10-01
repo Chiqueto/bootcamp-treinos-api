@@ -4,6 +4,7 @@ import {
   WorkoutPlanNotActiveError,
 } from "../errors/index.js";
 import { Prisma } from "../generated/prisma/client.js";
+import { WorkoutSessionOrigin } from "../generated/prisma/enums.js";
 import { prisma } from "../lib/db.js";
 
 interface InputDto {
@@ -14,6 +15,10 @@ interface InputDto {
 
 interface OutputDto {
   userWorkoutSessionId: string;
+  origin?: WorkoutSessionOrigin;
+  workoutPlanId?: string | null;
+  workoutPlanNameSnapshot?: string | null;
+  workoutDayNameSnapshot?: string | null;
   exercises: Array<{
     id: string;
     sourceWorkoutExerciseId: string | null;
@@ -73,7 +78,11 @@ export class StartWorkoutSession {
         const session = await tx.workoutSession.create({
           data: {
             id: crypto.randomUUID(),
+            origin: WorkoutSessionOrigin.PLANNED,
             workoutDayId: dto.workoutDayId,
+            workoutPlanId: workoutPlan.id,
+            workoutPlanNameSnapshot: workoutPlan.name,
+            workoutDayNameSnapshot: workoutDay.name,
             athleteId: dto.userId,
             startedAt: new Date(),
           },
@@ -110,6 +119,10 @@ export class StartWorkoutSession {
 
         return {
           userWorkoutSessionId: session.id,
+          origin: session.origin,
+          workoutPlanId: session.workoutPlanId,
+          workoutPlanNameSnapshot: session.workoutPlanNameSnapshot,
+          workoutDayNameSnapshot: session.workoutDayNameSnapshot,
           exercises: createdExercises,
         };
       });

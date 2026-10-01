@@ -258,6 +258,9 @@ export class CreatePeriodizationDraftFromAI {
         status: "DRAFT" as const,
         blocks: createdBlocks,
       };
+    }, {
+      maxWait: 5000,
+      timeout: 15000,
     });
   }
 }

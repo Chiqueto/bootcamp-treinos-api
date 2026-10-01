@@ -1,5 +1,6 @@
 import { ConflictError } from "../errors/index.js";
 import { Prisma } from "../generated/prisma/client.js";
+import { WorkoutSessionOrigin } from "../generated/prisma/enums.js";
 import { prisma } from "../lib/db.js";
 
 interface InputDto {
@@ -9,7 +10,11 @@ interface InputDto {
 interface OutputDto {
   userWorkoutSessionId: string;
   workoutSessionId: string;
+  origin?: WorkoutSessionOrigin;
   workoutDayId: string | null;
+  workoutPlanId?: string | null;
+  workoutPlanNameSnapshot?: string | null;
+  workoutDayNameSnapshot?: string | null;
   startedAt: string;
   completedAt: string | null;
 }
@@ -31,8 +36,12 @@ export class StartFreeWorkoutSession {
       const session = await prisma.workoutSession.create({
         data: {
           id: crypto.randomUUID(),
+          origin: WorkoutSessionOrigin.FREE,
           athleteId: dto.userId,
           workoutDayId: null,
+          workoutPlanId: null,
+          workoutPlanNameSnapshot: null,
+          workoutDayNameSnapshot: null,
           startedAt: new Date(),
         },
       });
@@ -40,7 +49,11 @@ export class StartFreeWorkoutSession {
       return {
         userWorkoutSessionId: session.id,
         workoutSessionId: session.id,
+        origin: session.origin,
         workoutDayId: session.workoutDayId,
+        workoutPlanId: session.workoutPlanId,
+        workoutPlanNameSnapshot: session.workoutPlanNameSnapshot,
+        workoutDayNameSnapshot: session.workoutDayNameSnapshot,
         startedAt: session.startedAt.toISOString(),
         completedAt: session.completedAt ? session.completedAt.toISOString() : null,
       };

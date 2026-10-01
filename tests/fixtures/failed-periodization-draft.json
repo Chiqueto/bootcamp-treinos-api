@@ -1,0 +1,567 @@
+{
+  "goal": "Melhorar performance no voleibol",
+  "name": "Performance Vôlei (12 Semanas)",
+  "notes": "Periodização dividida em 3 blocos de 4 semanas, com foco em força, potência e manutenção, adaptável à disponibilidade de treinos do usuário.",
+  "blocks": [
+    {
+      "plan": {
+        "name": "Bloco 1: Base de Força",
+        "workoutDays": [
+          {
+            "name": "Força Superior A",
+            "isRest": false,
+            "weekDay": "MONDAY",
+            "exercises": [
+              {
+                "name": "Supino Reto com Barra",
+                "reps": 10,
+                "sets": 4,
+                "order": 1,
+                "restTimeInSeconds": 90
+              },
+              {
+                "name": "Desenvolvimento com Halteres",
+                "reps": 10,
+                "sets": 4,
+                "order": 2,
+                "restTimeInSeconds": 90
+              },
+              {
+                "name": "Remada Curvada",
+                "reps": 10,
+                "sets": 4,
+                "order": 3,
+                "restTimeInSeconds": 90
+              },
+              {
+                "name": "Puxada Alta",
+                "reps": 10,
+                "sets": 4,
+                "order": 4,
+                "restTimeInSeconds": 90
+              },
+              {
+                "name": "Tríceps Testa",
+                "reps": 12,
+                "sets": 3,
+                "order": 5,
+                "restTimeInSeconds": 60
+              },
+              {
+                "name": "Elevação Lateral",
+                "reps": 15,
+                "sets": 3,
+                "order": 6,
+                "restTimeInSeconds": 60
+              }
+            ],
+            "estimatedDurationInSeconds": 3900
+          },
+          {
+            "name": "Descanso",
+            "isRest": true,
+            "weekDay": "TUESDAY",
+            "exercises": [],
+            "estimatedDurationInSeconds": 0
+          },
+          {
+            "name": "Força Inferior A",
+            "isRest": false,
+            "weekDay": "WEDNESDAY",
+            "exercises": [
+              {
+                "name": "Agachamento Livre",
+                "reps": 10,
+                "sets": 4,
+                "order": 1,
+                "restTimeInSeconds": 90
+              },
+              {
+                "name": "Leg Press",
+                "reps": 12,
+                "sets": 4,
+                "order": 2,
+                "restTimeInSeconds": 90
+              },
+              {
+                "name": "Cadeira Extensora",
+                "reps": 15,
+                "sets": 3,
+                "order": 3,
+                "restTimeInSeconds": 60
+              },
+              {
+                "name": "Stiff",
+                "reps": 10,
+                "sets": 4,
+                "order": 4,
+                "restTimeInSeconds": 90
+              },
+              {
+                "name": "Panturrilha em pé",
+                "reps": 15,
+                "sets": 4,
+                "order": 5,
+                "restTimeInSeconds": 60
+              }
+            ],
+            "estimatedDurationInSeconds": 3900
+          },
+          {
+            "name": "Descanso",
+            "isRest": true,
+            "weekDay": "THURSDAY",
+            "exercises": [],
+            "estimatedDurationInSeconds": 0
+          },
+          {
+            "name": "Força Superior B",
+            "isRest": false,
+            "weekDay": "FRIDAY",
+            "exercises": [
+              {
+                "name": "Barra Fixa (ou Puxada Supinada)",
+                "reps": 8,
+                "sets": 4,
+                "order": 1,
+                "restTimeInSeconds": 90
+              },
+              {
+                "name": "Remada Cavalinho",
+                "reps": 10,
+                "sets": 4,
+                "order": 2,
+                "restTimeInSeconds": 90
+              },
+              {
+                "name": "Crucifixo Inclinado",
+                "reps": 12,
+                "sets": 3,
+                "order": 3,
+                "restTimeInSeconds": 60
+              },
+              {
+                "name": "Rosca Direta",
+                "reps": 12,
+                "sets": 3,
+                "order": 4,
+                "restTimeInSeconds": 60
+              },
+              {
+                "name": "Rosca Martelo",
+                "reps": 12,
+                "sets": 3,
+                "order": 5,
+                "restTimeInSeconds": 60
+              },
+              {
+                "name": "Face Pull",
+                "reps": 15,
+                "sets": 3,
+                "order": 6,
+                "restTimeInSeconds": 60
+              }
+            ],
+            "estimatedDurationInSeconds": 3900
+          },
+          {
+            "name": "Força Inferior B",
+            "isRest": false,
+            "weekDay": "SATURDAY",
+            "exercises": [
+              {
+                "name": "Levantamento Terra Romeno",
+                "reps": 10,
+                "sets": 4,
+                "order": 1,
+                "restTimeInSeconds": 90
+              },
+              {
+                "name": "Mesa Flexora",
+                "reps": 12,
+                "sets": 4,
+                "order": 2,
+                "restTimeInSeconds": 60
+              },
+              {
+                "name": "Cadeira Adutora",
+                "reps": 15,
+                "sets": 3,
+                "order": 3,
+                "restTimeInSeconds": 60
+              },
+              {
+                "name": "Abdominal na Polia",
+                "reps": 15,
+                "sets": 3,
+                "order": 4,
+                "restTimeInSeconds": 60
+              },
+              {
+                "name": "Prancha",
+                "reps": 60,
+                "sets": 3,
+                "order": 5,
+                "restTimeInSeconds": 60
+              }
+            ],
+            "estimatedDurationInSeconds": 3600
+          },
+          {
+            "name": "Descanso",
+            "isRest": true,
+            "weekDay": "SUNDAY",
+            "exercises": [],
+            "estimatedDurationInSeconds": 0
+          }
+        ]
+      },
+      "notes": "Foco em construir força geral e aumentar massa muscular, preparando o corpo para as fases mais intensas."
+    },
+    {
+      "plan": {
+        "name": "Bloco 2: Potência e Explosão",
+        "workoutDays": [
+          {
+            "name": "Potência Membros Inferiores e Saltos",
+            "isRest": false,
+            "weekDay": "MONDAY",
+            "exercises": [
+              {
+                "name": "Salto em Caixa",
+                "reps": 6,
+                "sets": 4,
+                "order": 1,
+                "restTimeInSeconds": 120
+              },
+              {
+                "name": "Agachamento com Salto",
+                "reps": 8,
+                "sets": 4,
+                "order": 2,
+                "restTimeInSeconds": 120
+              },
+              {
+                "name": "Lunge com Salto",
+                "reps": 10,
+                "sets": 3,
+                "order": 3,
+                "restTimeInSeconds": 90
+              },
+              {
+                "name": "Burpee",
+                "reps": 10,
+                "sets": 3,
+                "order": 4,
+                "restTimeInSeconds": 90
+              },
+              {
+                "name": "Levantamento Terra Sumô (leve)",
+                "reps": 8,
+                "sets": 3,
+                "order": 5,
+                "restTimeInSeconds": 90
+              }
+            ],
+            "estimatedDurationInSeconds": 3900
+          },
+          {
+            "name": "Descanso/Mobilidade",
+            "isRest": true,
+            "weekDay": "TUESDAY",
+            "exercises": [],
+            "estimatedDurationInSeconds": 0
+          },
+          {
+            "name": "Força e Potência Superior",
+            "isRest": false,
+            "weekDay": "WEDNESDAY",
+            "exercises": [
+              {
+                "name": "Arremesso de Medicine Ball",
+                "reps": 8,
+                "sets": 4,
+                "order": 1,
+                "restTimeInSeconds": 120
+              },
+              {
+                "name": "Flexão Explosiva",
+                "reps": 8,
+                "sets": 4,
+                "order": 2,
+                "restTimeInSeconds": 90
+              },
+              {
+                "name": "Supino Inclinado com Halteres (leve e rápido)",
+                "reps": 10,
+                "sets": 3,
+                "order": 3,
+                "restTimeInSeconds": 90
+              },
+              {
+                "name": "Remada Unilateral com Halter",
+                "reps": 10,
+                "sets": 3,
+                "order": 4,
+                "restTimeInSeconds": 90
+              }
+            ],
+            "estimatedDurationInSeconds": 3900
+          },
+          {
+            "name": "Descanso/Mobilidade",
+            "isRest": true,
+            "weekDay": "THURSDAY",
+            "exercises": [],
+            "estimatedDurationInSeconds": 0
+          },
+          {
+            "name": "Potência e Agilidade Geral",
+            "isRest": false,
+            "weekDay": "FRIDAY",
+            "exercises": [
+              {
+                "name": "Box Jump",
+                "reps": 6,
+                "sets": 4,
+                "order": 1,
+                "restTimeInSeconds": 120
+              },
+              {
+                "name": "Salto Lateral",
+                "reps": 10,
+                "sets": 3,
+                "order": 2,
+                "restTimeInSeconds": 90
+              },
+              {
+                "name": "Skipping Alto",
+                "reps": 45,
+                "sets": 3,
+                "order": 3,
+                "restTimeInSeconds": 60
+              },
+              {
+                "name": "Corrida com Mudança de Direção",
+                "reps": 45,
+                "sets": 3,
+                "order": 4,
+                "restTimeInSeconds": 60
+              }
+            ],
+            "estimatedDurationInSeconds": 3600
+          },
+          {
+            "name": "Força Complementar e Core",
+            "isRest": false,
+            "weekDay": "SATURDAY",
+            "exercises": [
+              {
+                "name": "Puxada Frontal",
+                "reps": 12,
+                "sets": 3,
+                "order": 1,
+                "restTimeInSeconds": 90
+              },
+              {
+                "name": "Desenvolvimento Militar",
+                "reps": 10,
+                "sets": 3,
+                "order": 2,
+                "restTimeInSeconds": 90
+              },
+              {
+                "name": "Elevação Pélvica",
+                "reps": 15,
+                "sets": 3,
+                "order": 3,
+                "restTimeInSeconds": 60
+              },
+              {
+                "name": "Rotação de Tronco com Medicine Ball",
+                "reps": 12,
+                "sets": 3,
+                "order": 4,
+                "restTimeInSeconds": 60
+              },
+              {
+                "name": "Bicicleta Abdominal",
+                "reps": 20,
+                "sets": 3,
+                "order": 5,
+                "restTimeInSeconds": 60
+              }
+            ],
+            "estimatedDurationInSeconds": 3600
+          },
+          {
+            "name": "Descanso",
+            "isRest": true,
+            "weekDay": "SUNDAY",
+            "exercises": [],
+            "estimatedDurationInSeconds": 0
+          }
+        ]
+      },
+      "notes": "Foco em transformar a força adquirida em potência explosiva, essencial para os movimentos do vôlei."
+    },
+    {
+      "plan": {
+        "name": "Bloco 3: Manutenção e Especificidade",
+        "workoutDays": [
+          {
+            "name": "Força e Potência Leve",
+            "isRest": false,
+            "weekDay": "MONDAY",
+            "exercises": [
+              {
+                "name": "Agachamento Frontal",
+                "reps": 8,
+                "sets": 3,
+                "order": 1,
+                "restTimeInSeconds": 90
+              },
+              {
+                "name": "Supino Inclinado com Barra",
+                "reps": 10,
+                "sets": 3,
+                "order": 2,
+                "restTimeInSeconds": 90
+              },
+              {
+                "name": "Remada Sentada",
+                "reps": 10,
+                "sets": 3,
+                "order": 3,
+                "restTimeInSeconds": 90
+              },
+              {
+                "name": "Leg Press Unilateral",
+                "reps": 12,
+                "sets": 3,
+                "order": 4,
+                "restTimeInSeconds": 60
+              }
+            ],
+            "estimatedDurationInSeconds": 3600
+          },
+          {
+            "name": "Descanso/Treino de Vôlei Leve",
+            "isRest": true,
+            "weekDay": "TUESDAY",
+            "exercises": [],
+            "estimatedDurationInSeconds": 0
+          },
+          {
+            "name": "Potência Específica",
+            "isRest": false,
+            "weekDay": "WEDNESDAY",
+            "exercises": [
+              {
+                "name": "Salto Vertical",
+                "reps": 6,
+                "sets": 4,
+                "order": 1,
+                "restTimeInSeconds": 120
+              },
+              {
+                "name": "Ataque na Caixa",
+                "reps": 6,
+                "sets": 4,
+                "order": 2,
+                "restTimeInSeconds": 120
+              },
+              {
+                "name": "Arremesso de Medicine Ball (por cima da cabeça)",
+                "reps": 8,
+                "sets": 3,
+                "order": 3,
+                "restTimeInSeconds": 90
+              },
+              {
+                "name": "Flexão de Braço com Palma",
+                "reps": 8,
+                "sets": 3,
+                "order": 4,
+                "restTimeInSeconds": 90
+              }
+            ],
+            "estimatedDurationInSeconds": 3600
+          },
+          {
+            "name": "Descanso/Treino de Vôlei",
+            "isRest": true,
+            "weekDay": "THURSDAY",
+            "exercises": [],
+            "estimatedDurationInSeconds": 0
+          },
+          {
+            "name": "Manutenção Geral e Condicionamento",
+            "isRest": false,
+            "weekDay": "FRIDAY",
+            "exercises": [
+              {
+                "name": "Cadeira Extensora",
+                "reps": 15,
+                "sets": 3,
+                "order": 1,
+                "restTimeInSeconds": 60
+              },
+              {
+                "name": "Mesa Flexora",
+                "reps": 15,
+                "sets": 3,
+                "order": 2,
+                "restTimeInSeconds": 60
+              },
+              {
+                "name": "Elevação Lateral",
+                "reps": 15,
+                "sets": 3,
+                "order": 3,
+                "restTimeInSeconds": 60
+              },
+              {
+                "name": "Rosca Direta",
+                "reps": 12,
+                "sets": 3,
+                "order": 4,
+                "restTimeInSeconds": 60
+              },
+              {
+                "name": "Tríceps Corda",
+                "reps": 12,
+                "sets": 3,
+                "order": 5,
+                "restTimeInSeconds": 60
+              },
+              {
+                "name": "Prancha Lateral",
+                "reps": 45,
+                "sets": 3,
+                "order": 6,
+                "restTimeInSeconds": 60
+              }
+            ],
+            "estimatedDurationInSeconds": 3600
+          },
+          {
+            "name": "Descanso Ativo / Alongamento / Treino de Vôlei",
+            "isRest": true,
+            "weekDay": "SATURDAY",
+            "exercises": [],
+            "estimatedDurationInSeconds": 0
+          },
+          {
+            "name": "Descanso",
+            "isRest": true,
+            "weekDay": "SUNDAY",
+            "exercises": [],
+            "estimatedDurationInSeconds": 0
+          }
+        ]
+      },
+      "notes": "Foco em manter os ganhos de força e potência, integrar com os treinos de vôlei e aprimorar agilidade e condicionamento para o jogo."
+    }
+  ]
+}

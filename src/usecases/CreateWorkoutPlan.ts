@@ -141,6 +141,9 @@ export class CreateWorkoutPlan {
             })),
           })),
         };
+      }, {
+        maxWait: 5000,
+        timeout: 15000,
       });
     } catch (error) {
       if (

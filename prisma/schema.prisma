@@ -28,6 +28,11 @@ enum SetType {
   WORKING
 }
 
+enum WorkoutSessionOrigin {
+  PLANNED
+  FREE
+}
+
 model User {
   id                  String           @id
   workoutPlans        WorkoutPlan[]
@@ -64,6 +69,7 @@ model WorkoutPlan {
 
   workoutDays       WorkoutDay[]
   periodizationPlan PeriodizationPlan?
+  workoutSessions   WorkoutSession[]
 }
 
 model Periodization {
@@ -151,20 +157,26 @@ model WorkoutExercise {
 }
 
 model WorkoutSession {
-  id           String      @id @default(uuid())
-  workoutDayId String?
-  workoutDay   WorkoutDay? @relation(fields: [workoutDayId], references: [id], onDelete: SetNull)
-  athleteId    String
-  athlete      User        @relation(fields: [athleteId], references: [id], onDelete: Cascade)
-  startedAt    DateTime   @db.Timestamptz()
-  completedAt  DateTime?  @db.Timestamptz()
-  createdAt    DateTime   @default(now()) @db.Timestamptz()
-  updatedAt    DateTime   @updatedAt @db.Timestamptz()
+  id                      String               @id @default(uuid())
+  origin                  WorkoutSessionOrigin
+  workoutDayId            String?
+  workoutDay              WorkoutDay?          @relation(fields: [workoutDayId], references: [id], onDelete: SetNull)
+  workoutPlanId           String?
+  workoutPlan             WorkoutPlan?         @relation(fields: [workoutPlanId], references: [id], onDelete: SetNull)
+  workoutPlanNameSnapshot String?
+  workoutDayNameSnapshot  String?
+  athleteId               String
+  athlete                 User                 @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  startedAt               DateTime             @db.Timestamptz()
+  completedAt             DateTime?            @db.Timestamptz()
+  createdAt               DateTime             @default(now()) @db.Timestamptz()
+  updatedAt               DateTime             @updatedAt @db.Timestamptz()
 
-  sessionExercises SessionExercise[]
+  sessionExercises        SessionExercise[]
 
   @@index([athleteId, startedAt])
   @@index([athleteId, completedAt])
+  @@index([workoutPlanId])
 }
 
 model SessionExercise {
@@ -193,6 +205,7 @@ model SessionExercise {
 
   @@index([workoutSessionId, order])
   @@index([exerciseId])
+  @@index([exerciseId, workoutSessionId])
 }
 
 model WorkoutSet {
@@ -215,6 +228,7 @@ model WorkoutSet {
   updatedAt         DateTime        @updatedAt @db.Timestamptz()
 
   @@index([sessionExerciseId, order])
+  @@index([sessionExerciseId, type, completedAt])
 }
 
 model Session {

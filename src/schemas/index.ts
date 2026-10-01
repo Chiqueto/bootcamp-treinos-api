@@ -99,8 +99,14 @@ export const SessionExerciseResponseSchema = z.object({
   plannedRestTimeInSeconds: z.number().nullable(),
 });
 
+export const WorkoutSessionOriginSchema = z.enum(["PLANNED", "FREE"]);
+
 export const StartWorkoutSessionResponseSchema = z.object({
   userWorkoutSessionId: z.uuid(),
+  origin: WorkoutSessionOriginSchema.optional(),
+  workoutPlanId: z.uuid().nullable().optional(),
+  workoutPlanNameSnapshot: z.string().nullable().optional(),
+  workoutDayNameSnapshot: z.string().nullable().optional(),
   exercises: z.array(SessionExerciseResponseSchema).optional(),
 });
 
@@ -367,7 +373,11 @@ export const WorkoutSessionExerciseResponseSchema = z.object({
 
 export const GetWorkoutSessionResponseSchema = z.object({
   id: z.uuid(),
+  origin: WorkoutSessionOriginSchema.optional(),
   workoutDayId: z.uuid().nullable(),
+  workoutPlanId: z.uuid().nullable().optional(),
+  workoutPlanNameSnapshot: z.string().nullable().optional(),
+  workoutDayNameSnapshot: z.string().nullable().optional(),
   startedAt: z.string(),
   completedAt: z.string().nullable(),
   sessionExercises: z.array(WorkoutSessionExerciseResponseSchema),
@@ -383,7 +393,11 @@ export const CompleteWorkoutSessionResponseSchema = z.object({
 export const StartFreeWorkoutSessionResponseSchema = z.object({
   userWorkoutSessionId: z.uuid(),
   workoutSessionId: z.uuid(),
+  origin: WorkoutSessionOriginSchema.optional(),
   workoutDayId: z.uuid().nullable(),
+  workoutPlanId: z.uuid().nullable().optional(),
+  workoutPlanNameSnapshot: z.string().nullable().optional(),
+  workoutDayNameSnapshot: z.string().nullable().optional(),
   startedAt: z.string(),
   completedAt: z.string().nullable(),
 });

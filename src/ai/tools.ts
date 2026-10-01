@@ -294,74 +294,92 @@ export function getAiTools(userId: string) {
       inputSchema: aiWorkoutPlanInputSchema,
       needsApproval: true,
       execute: async (input, { toolCallId }) => {
-        if (toolCallId) {
-          const memoryKey = `${userId}:${toolCallId}`;
-          if (executedToolCallsCache.has(memoryKey)) {
-            return executedToolCallsCache.get(memoryKey) as {
-              status: string;
-              message: string;
-              planId: string;
-              name: string;
-              isActive: boolean;
-            };
-          }
+        const startTime = Date.now();
+        try {
+          if (toolCallId) {
+            const memoryKey = `${userId}:${toolCallId}`;
+            if (executedToolCallsCache.has(memoryKey)) {
+              return executedToolCallsCache.get(memoryKey) as {
+                status: string;
+                message: string;
+                planId: string;
+                name: string;
+                isActive: boolean;
+              };
+            }
 
-          const existingExecution = await prisma.aiToolExecution.findUnique({
-            where: {
-              userId_toolCallId: {
-                userId,
-                toolCallId,
-              },
-            },
-          });
-
-          if (existingExecution) {
-            const cachedResult = existingExecution.result as {
-              status: string;
-              message: string;
-              planId: string;
-              name: string;
-              isActive: boolean;
-            };
-            executedToolCallsCache.set(memoryKey, cachedResult);
-            return cachedResult;
-          }
-        }
-
-        const createWorkoutPlan = new CreateWorkoutPlan();
-        const created = await createWorkoutPlan.execute({
-          userId,
-          name: input.name,
-          workoutDays: input.workoutDays,
-          activate: false,
-        });
-
-        const result = {
-          status: "SAVED_DRAFT",
-          message:
-            "Plano de treino salvo com sucesso como rascunho inativo. Oriente o usuário que ele pode revisá-lo e ativá-lo em Planejamento (/planning).",
-          planId: created.id,
-          name: created.name,
-          isActive: created.isActive,
-        };
-
-        if (toolCallId) {
-          try {
-            await prisma.aiToolExecution.create({
-              data: {
-                userId,
-                toolCallId,
-                toolName: "createWorkoutPlanDraft",
-                result: result as unknown as Prisma.InputJsonValue,
+            const existingExecution = await prisma.aiToolExecution.findUnique({
+              where: {
+                userId_toolCallId: {
+                  userId,
+                  toolCallId,
+                },
               },
             });
-          } catch {
-            // ignore unique constraint race condition
-          }
-          executedToolCallsCache.set(`${userId}:${toolCallId}`, result);
-        }
 
-        return result;
+            if (existingExecution) {
+              const cachedResult = existingExecution.result as {
+                status: string;
+                message: string;
+                planId: string;
+                name: string;
+                isActive: boolean;
+              };
+              executedToolCallsCache.set(memoryKey, cachedResult);
+              return cachedResult;
+            }
+          }
+
+          const createWorkoutPlan = new CreateWorkoutPlan();
+          const created = await createWorkoutPlan.execute({
+            userId,
+            name: input.name,
+            workoutDays: input.workoutDays,
+            activate: false,
+          });
+
+          const result = {
+            status: "SAVED_DRAFT",
+            message:
+              "Plano de treino salvo com sucesso como rascunho inativo. Oriente o usuário que ele pode revisá-lo e ativá-lo em Planejamento (/planning).",
+            planId: created.id,
+            name: created.name,
+            isActive: created.isActive,
+          };
+
+          if (toolCallId) {
+            try {
+              await prisma.aiToolExecution.create({
+                data: {
+                  userId,
+                  toolCallId,
+                  toolName: "createWorkoutPlanDraft",
+                  result: result as unknown as Prisma.InputJsonValue,
+                },
+              });
+            } catch {
+              // ignore unique constraint race condition
+            }
+            executedToolCallsCache.set(`${userId}:${toolCallId}`, result);
+          }
+
+          return result;
+        } catch (error: unknown) {
+          const elapsedMs = Date.now() - startTime;
+          const errObj = error as {
+            name?: string;
+            message?: string;
+            code?: string;
+            meta?: { code?: string };
+          } | null;
+          const errorCode = errObj?.code || errObj?.meta?.code || "none";
+          const errorName = errObj?.name || "UnknownError";
+          const errorMessage = errObj?.message || String(error);
+          console.error(
+            `[createWorkoutPlanDraft:error] toolName=createWorkoutPlanDraft toolCallId=${toolCallId ?? "unknown"} userId=${userId} blocksCount=1 elapsedMs=${elapsedMs} errorName=${errorName} errorCode=${errorCode} errorMessage=${errorMessage}`,
+          );
+          throw error;
+        }
       },
     }),
 
@@ -385,78 +403,97 @@ export function getAiTools(userId: string) {
       inputSchema: aiPeriodizationInputSchema,
       needsApproval: true,
       execute: async (input, { toolCallId }) => {
-        if (toolCallId) {
-          const memoryKey = `${userId}:${toolCallId}`;
-          if (executedToolCallsCache.has(memoryKey)) {
-            return executedToolCallsCache.get(memoryKey) as {
-              status: string;
-              message: string;
-              periodizationId: string;
-              name: string;
-              isActive: boolean;
-              blocksCount: number;
-            };
-          }
+        const startTime = Date.now();
+        const blocksCount = input.blocks?.length ?? 0;
+        try {
+          if (toolCallId) {
+            const memoryKey = `${userId}:${toolCallId}`;
+            if (executedToolCallsCache.has(memoryKey)) {
+              return executedToolCallsCache.get(memoryKey) as {
+                status: string;
+                message: string;
+                periodizationId: string;
+                name: string;
+                isActive: boolean;
+                blocksCount: number;
+              };
+            }
 
-          const existingExecution = await prisma.aiToolExecution.findUnique({
-            where: {
-              userId_toolCallId: {
-                userId,
-                toolCallId,
-              },
-            },
-          });
-
-          if (existingExecution) {
-            const cachedResult = existingExecution.result as {
-              status: string;
-              message: string;
-              periodizationId: string;
-              name: string;
-              isActive: boolean;
-              blocksCount: number;
-            };
-            executedToolCallsCache.set(memoryKey, cachedResult);
-            return cachedResult;
-          }
-        }
-
-        const createPeriodizationDraftFromAI =
-          new CreatePeriodizationDraftFromAI();
-        const created = await createPeriodizationDraftFromAI.execute({
-          userId,
-          name: input.name,
-          goal: input.goal,
-          notes: input.notes,
-          blocks: input.blocks,
-        });
-
-        const result = {
-          status: "SAVED_DRAFT",
-          message: `Periodização salva com sucesso como rascunho inativo com ${created.blocks.length} etapas. Oriente o usuário que ele pode revisá-la e ativá-la em Planejamento (/planning/periodizations/${created.id}).`,
-          periodizationId: created.id,
-          name: created.name,
-          isActive: created.isActive,
-          blocksCount: created.blocks.length,
-        };
-
-        if (toolCallId) {
-          try {
-            await prisma.aiToolExecution.create({
-              data: {
-                userId,
-                toolCallId,
-                toolName: "createPeriodizationDraft",
-                result: result as unknown as Prisma.InputJsonValue,
+            const existingExecution = await prisma.aiToolExecution.findUnique({
+              where: {
+                userId_toolCallId: {
+                  userId,
+                  toolCallId,
+                },
               },
             });
-          } catch {
-            // ignore unique constraint race condition
-          }
-          executedToolCallsCache.set(`${userId}:${toolCallId}`, result);
-        }
 
-        return result;
+            if (existingExecution) {
+              const cachedResult = existingExecution.result as {
+                status: string;
+                message: string;
+                periodizationId: string;
+                name: string;
+                isActive: boolean;
+                blocksCount: number;
+              };
+              executedToolCallsCache.set(memoryKey, cachedResult);
+              return cachedResult;
+            }
+          }
+
+          const createPeriodizationDraftFromAI =
+            new CreatePeriodizationDraftFromAI();
+          const created = await createPeriodizationDraftFromAI.execute({
+            userId,
+            name: input.name,
+            goal: input.goal,
+            notes: input.notes,
+            blocks: input.blocks,
+          });
+
+          const result = {
+            status: "SAVED_DRAFT",
+            message: `Periodização salva com sucesso como rascunho inativo com ${created.blocks.length} etapas. Oriente o usuário que ele pode revisá-la e ativá-la em Planejamento (/planning/periodizations/${created.id}).`,
+            periodizationId: created.id,
+            name: created.name,
+            isActive: created.isActive,
+            blocksCount: created.blocks.length,
+          };
+
+          if (toolCallId) {
+            try {
+              await prisma.aiToolExecution.create({
+                data: {
+                  userId,
+                  toolCallId,
+                  toolName: "createPeriodizationDraft",
+                  result: result as unknown as Prisma.InputJsonValue,
+                },
+              });
+            } catch {
+              // ignore unique constraint race condition
+            }
+            executedToolCallsCache.set(`${userId}:${toolCallId}`, result);
+          }
+
+          return result;
+        } catch (error: unknown) {
+          const elapsedMs = Date.now() - startTime;
+          const errObj = error as {
+            name?: string;
+            message?: string;
+            code?: string;
+            meta?: { code?: string };
+          } | null;
+          const errorCode = errObj?.code || errObj?.meta?.code || "none";
+          const errorName = errObj?.name || "UnknownError";
+          const errorMessage = errObj?.message || String(error);
+          console.error(
+            `[createPeriodizationDraft:error] toolName=createPeriodizationDraft toolCallId=${toolCallId ?? "unknown"} userId=${userId} blocksCount=${blocksCount} elapsedMs=${elapsedMs} errorName=${errorName} errorCode=${errorCode} errorMessage=${errorMessage}`,
+          );
+          throw error;
+        }
       },
     }),
   };

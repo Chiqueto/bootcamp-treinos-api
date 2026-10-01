@@ -1,4 +1,4 @@
-import { SetType, WeekDay } from "../../src/generated/prisma/enums.js";
+import { SetType, WeekDay, WorkoutSessionOrigin } from "../../src/generated/prisma/enums.js";
 import { prisma } from "../../src/lib/db.js";
 
 export async function createTestUser(override?: {
@@ -177,15 +177,32 @@ export async function createTestWorkoutSession(
     athleteId?: string;
     startedAt?: Date;
     completedAt?: Date | null;
+    origin?: WorkoutSessionOrigin;
+    workoutPlanId?: string | null;
+    workoutPlanNameSnapshot?: string | null;
+    workoutDayNameSnapshot?: string | null;
   },
 ) {
   let athleteId = override?.athleteId;
-  if (!athleteId && workoutDayId) {
+  let workoutPlanId = override?.workoutPlanId;
+  let workoutPlanNameSnapshot = override?.workoutPlanNameSnapshot;
+  let workoutDayNameSnapshot = override?.workoutDayNameSnapshot;
+
+  if (
+    workoutDayId &&
+    (!athleteId ||
+      workoutPlanId === undefined ||
+      workoutPlanNameSnapshot === undefined ||
+      workoutDayNameSnapshot === undefined)
+  ) {
     const day = await prisma.workoutDay.findUnique({
       where: { id: workoutDayId },
       include: { workoutPlan: true },
     });
-    athleteId = day?.workoutPlan.userId;
+    if (!athleteId) athleteId = day?.workoutPlan.userId;
+    if (workoutPlanId === undefined) workoutPlanId = day?.workoutPlanId ?? null;
+    if (workoutPlanNameSnapshot === undefined) workoutPlanNameSnapshot = day?.workoutPlan.name ?? null;
+    if (workoutDayNameSnapshot === undefined) workoutDayNameSnapshot = day?.name ?? null;
   }
 
   if (!athleteId) {
@@ -194,11 +211,19 @@ export async function createTestWorkoutSession(
     );
   }
 
+  const origin =
+    override?.origin ??
+    (workoutDayId ? WorkoutSessionOrigin.PLANNED : WorkoutSessionOrigin.FREE);
+
   return prisma.workoutSession.create({
     data: {
       id: override?.id ?? crypto.randomUUID(),
       workoutDayId,
       athleteId,
+      origin,
+      workoutPlanId: workoutPlanId ?? null,
+      workoutPlanNameSnapshot: workoutPlanNameSnapshot ?? null,
+      workoutDayNameSnapshot: workoutDayNameSnapshot ?? null,
       startedAt: override?.startedAt ?? new Date(),
       completedAt: override?.completedAt !== undefined ? override.completedAt : null,
     },
