@@ -46,6 +46,8 @@ model User {
   createdExercises    Exercise[]
   workoutSessions     WorkoutSession[]
   periodizations      Periodization[]
+  aiConversations     AiConversation[]
+  aiToolExecutions    AiToolExecution[]
 
   @@unique([email])
   @@map("user")
@@ -262,3 +264,42 @@ model Verification {
   @@index([identifier])
   @@map("verification")
 }
+
+model AiConversation {
+  id        String      @id @default(uuid())
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  createdAt DateTime    @default(now()) @db.Timestamptz()
+  updatedAt DateTime    @updatedAt @db.Timestamptz()
+
+  messages  AiMessage[]
+
+  @@index([userId, updatedAt(sort: Desc)])
+}
+
+model AiMessage {
+  id             String         @id @default(uuid())
+  conversationId String
+  conversation   AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sdkMessageId   String
+  payload        Json
+  createdAt      DateTime       @default(now()) @db.Timestamptz()
+
+  @@unique([conversationId, sdkMessageId])
+  @@index([conversationId, createdAt(sort: Asc)])
+}
+
+model AiToolExecution {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  toolCallId String
+  toolName   String
+  result     Json
+  createdAt  DateTime @default(now()) @db.Timestamptz()
+
+  @@unique([userId, toolCallId])
+  @@index([userId, toolName])
+}
+

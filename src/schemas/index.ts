@@ -696,4 +696,40 @@ export const PlanningOverviewResponseSchema = z.object({
   periodizations: z.array(PlanningPeriodizationSummarySchema),
 });
 
+export const AiConversationSummarySchema = z.object({
+  id: z.uuid(),
+  title: z.string(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  messagesCount: z.number().int().min(0),
+});
+
+export const ListAiConversationsResponseSchema = z.object({
+  conversations: z.array(AiConversationSummarySchema),
+});
+
+export const GetAiConversationResponseSchema = z.object({
+  id: z.uuid(),
+  title: z.string(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  messages: z.array(z.unknown()),
+});
+
+export const CreateAiConversationBodySchema = z.object({
+  title: z.string().trim().min(1).optional(),
+});
+
+export const CreateAiConversationResponseSchema = z.object({
+  id: z.uuid(),
+  title: z.string(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+export const AiConversationParamsSchema = z.object({
+  id: z.uuid(),
+});
+
+
 

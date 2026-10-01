@@ -1,7 +1,9 @@
 import { tool } from "ai";
 import z from "zod";
 
+import { Prisma } from "../generated/prisma/client.js";
 import { WeekDay } from "../generated/prisma/enums.js";
+import { prisma } from "../lib/db.js";
 import { CreatePeriodizationDraftFromAI } from "../usecases/CreatePeriodizationDraftFromAI.js";
 import { CreateWorkoutPlan } from "../usecases/CreateWorkoutPlan.js";
 import { GetPeriodization } from "../usecases/GetPeriodization.js";
@@ -293,15 +295,36 @@ export function getAiTools(userId: string) {
       needsApproval: true,
       execute: async (input, { toolCallId }) => {
         if (toolCallId) {
-          const key = `${userId}:${toolCallId}`;
-          if (executedToolCallsCache.has(key)) {
-            return executedToolCallsCache.get(key) as {
+          const memoryKey = `${userId}:${toolCallId}`;
+          if (executedToolCallsCache.has(memoryKey)) {
+            return executedToolCallsCache.get(memoryKey) as {
               status: string;
               message: string;
               planId: string;
               name: string;
               isActive: boolean;
             };
+          }
+
+          const existingExecution = await prisma.aiToolExecution.findUnique({
+            where: {
+              userId_toolCallId: {
+                userId,
+                toolCallId,
+              },
+            },
+          });
+
+          if (existingExecution) {
+            const cachedResult = existingExecution.result as {
+              status: string;
+              message: string;
+              planId: string;
+              name: string;
+              isActive: boolean;
+            };
+            executedToolCallsCache.set(memoryKey, cachedResult);
+            return cachedResult;
           }
         }
 
@@ -323,6 +346,18 @@ export function getAiTools(userId: string) {
         };
 
         if (toolCallId) {
+          try {
+            await prisma.aiToolExecution.create({
+              data: {
+                userId,
+                toolCallId,
+                toolName: "createWorkoutPlanDraft",
+                result: result as unknown as Prisma.InputJsonValue,
+              },
+            });
+          } catch {
+            // ignore unique constraint race condition
+          }
           executedToolCallsCache.set(`${userId}:${toolCallId}`, result);
         }
 
@@ -351,9 +386,9 @@ export function getAiTools(userId: string) {
       needsApproval: true,
       execute: async (input, { toolCallId }) => {
         if (toolCallId) {
-          const key = `${userId}:${toolCallId}`;
-          if (executedToolCallsCache.has(key)) {
-            return executedToolCallsCache.get(key) as {
+          const memoryKey = `${userId}:${toolCallId}`;
+          if (executedToolCallsCache.has(memoryKey)) {
+            return executedToolCallsCache.get(memoryKey) as {
               status: string;
               message: string;
               periodizationId: string;
@@ -361,6 +396,28 @@ export function getAiTools(userId: string) {
               isActive: boolean;
               blocksCount: number;
             };
+          }
+
+          const existingExecution = await prisma.aiToolExecution.findUnique({
+            where: {
+              userId_toolCallId: {
+                userId,
+                toolCallId,
+              },
+            },
+          });
+
+          if (existingExecution) {
+            const cachedResult = existingExecution.result as {
+              status: string;
+              message: string;
+              periodizationId: string;
+              name: string;
+              isActive: boolean;
+              blocksCount: number;
+            };
+            executedToolCallsCache.set(memoryKey, cachedResult);
+            return cachedResult;
           }
         }
 
@@ -384,6 +441,18 @@ export function getAiTools(userId: string) {
         };
 
         if (toolCallId) {
+          try {
+            await prisma.aiToolExecution.create({
+              data: {
+                userId,
+                toolCallId,
+                toolName: "createPeriodizationDraft",
+                result: result as unknown as Prisma.InputJsonValue,
+              },
+            });
+          } catch {
+            // ignore unique constraint race condition
+          }
           executedToolCallsCache.set(`${userId}:${toolCallId}`, result);
         }
 
