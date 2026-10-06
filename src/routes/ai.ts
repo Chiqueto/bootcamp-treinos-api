@@ -7,7 +7,7 @@ import z from "zod";
 
 import { getSystemPrompt } from "../ai/system-prompt.js";
 import { getAiTools } from "../ai/tools.js";
-import { NotFoundError } from "../errors/index.js";
+import { InvalidTimezoneError, NotFoundError } from "../errors/index.js";
 import { auth } from "../lib/auth.js";
 import { prisma } from "../lib/db.js";
 import {
@@ -58,6 +58,7 @@ export const aiRoutes = async (app: FastifyInstance) => {
       body: z.object({
         messages: z.array(z.any()),
         conversationId: z.string().uuid().optional(),
+        timezone: z.string().max(255).optional(),
       }),
     },
     handler: async (request, reply) => {
@@ -66,15 +67,36 @@ export const aiRoutes = async (app: FastifyInstance) => {
       });
 
       if (!session) {
-        return reply.status(401).send({ error: "Unauthorized", code: "UNAUTHORIZED" });
+        return reply
+          .status(401)
+          .send({ error: "Unauthorized", code: "UNAUTHORIZED" });
       }
 
       const userId = session.user.id;
       const userName = session.user.name;
-      const { messages, conversationId: bodyConversationId } = request.body as {
+      const {
+        messages,
+        conversationId: bodyConversationId,
+        timezone,
+      } = request.body as {
         messages: UIMessage[];
         conversationId?: string;
+        timezone?: string;
       };
+
+      let tools;
+      try {
+        tools = getAiTools(userId, { timezone });
+      } catch (error) {
+        if (error instanceof InvalidTimezoneError) {
+          return reply.status(400).send({
+            error: error.message,
+            code: "INVALID_TIMEZONE",
+          });
+        }
+        throw error;
+      }
+
       const queryConversationId = request.query.conversationId;
       const requestedConversationId = bodyConversationId || queryConversationId;
 
@@ -109,7 +131,7 @@ export const aiRoutes = async (app: FastifyInstance) => {
         system: getSystemPrompt(userName),
         messages: await convertToModelMessages(messages),
         stopWhen: stepCountIs(10),
-        tools: getAiTools(userId),
+        tools,
       });
 
       const response = result.toUIMessageStreamResponse({
@@ -154,7 +176,9 @@ export const aiRoutes = async (app: FastifyInstance) => {
       });
 
       if (!session) {
-        return reply.status(401).send({ error: "Unauthorized", code: "UNAUTHORIZED" });
+        return reply
+          .status(401)
+          .send({ error: "Unauthorized", code: "UNAUTHORIZED" });
       }
 
       const listConversations = new ListAiConversations();
@@ -186,7 +210,9 @@ export const aiRoutes = async (app: FastifyInstance) => {
       });
 
       if (!session) {
-        return reply.status(401).send({ error: "Unauthorized", code: "UNAUTHORIZED" });
+        return reply
+          .status(401)
+          .send({ error: "Unauthorized", code: "UNAUTHORIZED" });
       }
 
       const createConversation = new CreateAiConversation();
@@ -220,7 +246,9 @@ export const aiRoutes = async (app: FastifyInstance) => {
       });
 
       if (!session) {
-        return reply.status(401).send({ error: "Unauthorized", code: "UNAUTHORIZED" });
+        return reply
+          .status(401)
+          .send({ error: "Unauthorized", code: "UNAUTHORIZED" });
       }
 
       try {
@@ -249,7 +277,8 @@ export const aiRoutes = async (app: FastifyInstance) => {
     url: "/conversations/:id",
     schema: {
       tags: ["AI"],
-      summary: "Delete AI conversation (never removes workout plans or periodizations)",
+      summary:
+        "Delete AI conversation (never removes workout plans or periodizations)",
       params: AiConversationParamsSchema,
       response: {
         200: SuccessResponseSchema,
@@ -264,7 +293,9 @@ export const aiRoutes = async (app: FastifyInstance) => {
       });
 
       if (!session) {
-        return reply.status(401).send({ error: "Unauthorized", code: "UNAUTHORIZED" });
+        return reply
+          .status(401)
+          .send({ error: "Unauthorized", code: "UNAUTHORIZED" });
       }
 
       try {

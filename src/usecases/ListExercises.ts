@@ -4,9 +4,10 @@ import { prisma } from "../lib/db.js";
 interface InputDto {
   userId: string;
   query?: string;
+  limit?: number;
 }
 
-interface ExerciseOutputDto {
+export interface ExerciseOutputDto {
   id: string;
   name: string;
   ownerUserId: string | null;
@@ -23,14 +24,7 @@ export class ListExercises {
       OR: [{ ownerUserId: null }, { ownerUserId: dto.userId }],
     };
 
-    if (dto.query && dto.query.trim().length > 0) {
-      where.name = {
-        contains: dto.query.trim(),
-        mode: "insensitive",
-      };
-    }
-
-    return prisma.exercise.findMany({
+    const exercises = await prisma.exercise.findMany({
       where,
       orderBy: { name: "asc" },
       select: {
@@ -47,5 +41,47 @@ export class ListExercises {
         },
       },
     });
+
+    const normalizedQuery = normalizeExerciseSearch(dto.query ?? "");
+    const matchingExercises = normalizedQuery
+      ? exercises
+          .filter((exercise) =>
+            normalizeExerciseSearch(exercise.name).includes(normalizedQuery),
+          )
+          .sort((a, b) => {
+            const aName = normalizeExerciseSearch(a.name);
+            const bName = normalizeExerciseSearch(b.name);
+            const aRank =
+              aName === normalizedQuery
+                ? 0
+                : aName.startsWith(normalizedQuery)
+                  ? 1
+                  : 2;
+            const bRank =
+              bName === normalizedQuery
+                ? 0
+                : bName.startsWith(normalizedQuery)
+                  ? 1
+                  : 2;
+            return (
+              aRank - bRank ||
+              aName.localeCompare(bName) ||
+              a.id.localeCompare(b.id)
+            );
+          })
+      : exercises;
+
+    return dto.limit === undefined
+      ? matchingExercises
+      : matchingExercises.slice(0, Math.max(0, dto.limit));
   }
+}
+
+function normalizeExerciseSearch(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLocaleLowerCase("pt-BR");
 }

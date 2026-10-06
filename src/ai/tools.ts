@@ -1,15 +1,22 @@
 import { tool } from "ai";
 import z from "zod";
 
+import { validateIanaTimezone } from "../domain/analytics-dates.js";
 import { Prisma } from "../generated/prisma/client.js";
 import { WeekDay } from "../generated/prisma/enums.js";
 import { prisma } from "../lib/db.js";
 import { CreatePeriodizationDraftFromAI } from "../usecases/CreatePeriodizationDraftFromAI.js";
 import { CreateWorkoutPlan } from "../usecases/CreateWorkoutPlan.js";
+import { GetExerciseEvolution } from "../usecases/GetExerciseEvolution.js";
+import { GetMuscleTrainingAnalytics } from "../usecases/GetMuscleTrainingAnalytics.js";
 import { GetPeriodization } from "../usecases/GetPeriodization.js";
 import { GetPlanningOverview } from "../usecases/GetPlanningOverview.js";
 import { GetUserTrainData } from "../usecases/GetUserTrainData.js";
+import { GetWeeklyTrainingAnalytics } from "../usecases/GetWeeklyTrainingAnalytics.js";
+import { GetWorkoutHistorySession } from "../usecases/GetWorkoutHistorySession.js";
 import { GetWorkoutPlan } from "../usecases/GetWorkoutPlan.js";
+import { ListExercises } from "../usecases/ListExercises.js";
+import { ListWorkoutHistory } from "../usecases/ListWorkoutHistory.js";
 import { UpsertUserTrainData } from "../usecases/UpsertUserTrainData.js";
 
 const ALL_WEEK_DAYS = [
@@ -88,7 +95,9 @@ export const aiWorkoutDaySchema = z
       .describe("URL da imagem de capa (opcional/nulo)"),
     exercises: z
       .array(aiExerciseSchema)
-      .describe("Lista de exercícios do dia (deve ser vazia se isRest for true)"),
+      .describe(
+        "Lista de exercícios do dia (deve ser vazia se isRest for true)",
+      ),
   })
   .superRefine((data, ctx) => {
     if (data.isRest) {
@@ -208,7 +217,20 @@ export function clearToolCallsCache() {
   executedToolCallsCache.clear();
 }
 
-export function getAiTools(userId: string) {
+export interface AiToolsContext {
+  timezone?: string;
+}
+
+const TIMEZONE_REQUIRED_RESULT = {
+  status: "TIMEZONE_REQUIRED" as const,
+  message: "Não há timezone disponível para calcular este período.",
+};
+
+export function getAiTools(userId: string, context: AiToolsContext = {}) {
+  const timezone = context.timezone
+    ? validateIanaTimezone(context.timezone)
+    : undefined;
+
   return {
     getPlanningOverview: tool({
       description:
@@ -283,6 +305,199 @@ export function getAiTools(userId: string) {
           age: params.age,
           bodyFatPercentage: params.bodyFatPercentage ?? 0,
         });
+      },
+    }),
+
+    getRecentTrainingHistory: tool({
+      description:
+        "Consulta as sessões de treino concluídas mais recentes do usuário autenticado. Use para responder o que ele treinou nos últimos dias, qual foi o último treino ou quantos treinos recentes fez. Retorna somente um resumo compacto e factual; use getWorkoutHistorySession quando precisar das séries e exercícios de uma sessão específica.",
+      inputSchema: z.object({
+        limit: z
+          .number()
+          .int()
+          .min(1)
+          .max(10)
+          .default(5)
+          .describe("Quantidade de sessões recentes (padrão 5, máximo 10)"),
+        origin: z
+          .enum(["PLANNED", "FREE"])
+          .optional()
+          .describe("Filtra por treino planejado ou treino avulso"),
+      }),
+      execute: async ({ limit, origin }) => {
+        const listWorkoutHistory = new ListWorkoutHistory();
+        const result = await listWorkoutHistory.execute({
+          userId,
+          limit,
+          origin,
+        });
+
+        return {
+          sessions: result.items.map((session) => ({
+            id: session.id,
+            completedAt: session.completedAt,
+            origin: session.origin,
+            workoutPlanNameSnapshot: session.workoutPlanNameSnapshot,
+            workoutDayNameSnapshot: session.workoutDayNameSnapshot,
+            exercisesCount: session.exercisesCount,
+            workingSetsCount: session.workingSetsCount,
+            warmupSetsCount: session.warmupSetsCount,
+            totalLoadVolumeKg: session.totalLoadVolumeKg,
+            durationInSeconds: session.durationInSeconds,
+          })),
+        };
+      },
+    }),
+
+    getWorkoutHistorySession: tool({
+      description:
+        "Consulta o registro histórico completo de uma sessão concluída pertencente ao usuário autenticado. Use após identificar uma sessionId para responder o que foi planejado e realizado, incluindo exercícios, séries concluídas, carga, repetições e RIR. Os dados são snapshots históricos e não são reconstruídos do plano atual.",
+      inputSchema: z.object({
+        sessionId: z
+          .string()
+          .uuid()
+          .describe("ID da sessão histórica concluída"),
+      }),
+      execute: async ({ sessionId }) => {
+        const getWorkoutHistorySession = new GetWorkoutHistorySession();
+        return getWorkoutHistorySession.execute({ userId, sessionId });
+      },
+    }),
+
+    searchExercises: tool({
+      description:
+        "Busca deterministicamente no catálogo de exercícios globais e personalizados do próprio usuário. Use antes de getExerciseEvolution quando o exerciseId não for conhecido. A busca serve somente para descobrir IDs; se houver vários resultados plausíveis, pergunte ao usuário qual exercício ele quis dizer e não escolha silenciosamente.",
+      inputSchema: z.object({
+        query: z
+          .string()
+          .trim()
+          .min(1)
+          .describe("Nome ou parte do nome do exercício"),
+        limit: z
+          .number()
+          .int()
+          .min(1)
+          .max(15)
+          .default(8)
+          .describe("Quantidade máxima de resultados (padrão 8, máximo 15)"),
+      }),
+      execute: async ({ query, limit }) => {
+        const listExercises = new ListExercises();
+        const exercises = await listExercises.execute({ userId, query, limit });
+        return {
+          exercises: exercises.map((exercise) => ({
+            id: exercise.id,
+            name: exercise.name,
+            ownerUserId: exercise.ownerUserId,
+            isCustom: exercise.ownerUserId !== null,
+            muscles: exercise.muscles.map(({ muscleGroup, role }) => ({
+              muscleGroup,
+              role,
+            })),
+          })),
+        };
+      },
+    }),
+
+    getExerciseEvolution: tool({
+      description:
+        "Consulta o histórico real de execução e o load PR de um exercício específico do usuário. Use para responder perguntas sobre progressão de carga, repetições, RIR, volume e recordes. Requer exerciseId; use searchExercises antes quando o ID não for conhecido. Retorna fatos registrados e não calcula progressScore nem uma conclusão automática de evolução.",
+      inputSchema: z.object({
+        exerciseId: z.string().uuid().describe("ID canônico do exercício"),
+        limit: z
+          .number()
+          .int()
+          .min(1)
+          .max(12)
+          .default(6)
+          .describe("Quantidade de sessões recentes (padrão 6, máximo 12)"),
+      }),
+      execute: async ({ exerciseId, limit }) => {
+        const getExerciseEvolution = new GetExerciseEvolution();
+        const result = await getExerciseEvolution.execute({
+          userId,
+          exerciseId,
+          limit,
+        });
+        return {
+          exercise: result.exercise,
+          loadPR: result.loadPR,
+          sessions: result.items,
+        };
+      },
+    }),
+
+    getWeeklyTrainingAnalytics: tool({
+      description:
+        "Consulta analytics semanais reais do usuário no timezone enviado pelo dispositivo. Use para frequência, séries, volume de carga e duração nas últimas semanas. A semana Trainvy vai de segunda a domingo. Não recebe timezone do modelo e não deve ser usada para inventar dados quando o contexto temporal estiver ausente.",
+      inputSchema: z.object({
+        weeksCount: z
+          .number()
+          .int()
+          .min(1)
+          .max(12)
+          .default(4)
+          .describe("Semana atual mais as anteriores (padrão 4, máximo 12)"),
+      }),
+      execute: async ({ weeksCount }) => {
+        if (!timezone) return TIMEZONE_REQUIRED_RESULT;
+
+        const getWeeklyTrainingAnalytics = new GetWeeklyTrainingAnalytics();
+        const result = await getWeeklyTrainingAnalytics.execute({
+          userId,
+          tz: timezone,
+          weeksCount,
+        });
+        return {
+          timezone: result.timezone,
+          startDate: result.startDate,
+          endDate: result.endDate,
+          weeks: result.weeks.map((week) => ({
+            weekStartDate: week.weekStartDate,
+            weekEndDate: week.weekEndDate,
+            workoutsCompleted: week.workoutsCompleted,
+            workingSets: week.workingSets,
+            warmupSets: week.warmupSets,
+            loadVolumeKg: week.loadVolumeKg,
+            totalDurationInSeconds: week.totalDurationInSeconds,
+            averageDurationInSeconds: week.averageDurationInSeconds,
+          })),
+        };
+      },
+    }),
+
+    getMuscleTrainingAnalytics: tool({
+      description:
+        "Consulta séries de trabalho diretas e indiretas por grupo muscular em um período civil no timezone do dispositivo. Use para comparar músculos ou responder quantas séries de peito, costas, quadríceps etc. foram feitas. totalWorkingSets é o total real; não some contagens diretas e indiretas entre músculos para tratá-las como total.",
+      inputSchema: z.object({
+        startDate: z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}$/)
+          .describe("Primeiro dia civil do período em YYYY-MM-DD"),
+        endDate: z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}$/)
+          .describe("Último dia civil do período em YYYY-MM-DD"),
+      }),
+      execute: async ({ startDate, endDate }) => {
+        if (!timezone) return TIMEZONE_REQUIRED_RESULT;
+
+        const getMuscleTrainingAnalytics = new GetMuscleTrainingAnalytics();
+        const result = await getMuscleTrainingAnalytics.execute({
+          userId,
+          tz: timezone,
+          startDate,
+          endDate,
+        });
+        return {
+          timezone: result.timezone,
+          startDate: result.startDate,
+          endDate: result.endDate,
+          totalWorkingSets: result.totalWorkingSets,
+          classifiedWorkingSets: result.classifiedWorkingSets,
+          unclassifiedWorkingSets: result.unclassifiedWorkingSets,
+          muscles: result.muscles,
+        };
       },
     }),
 
