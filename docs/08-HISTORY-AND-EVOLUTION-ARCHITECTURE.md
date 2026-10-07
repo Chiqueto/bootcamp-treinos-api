@@ -668,6 +668,24 @@ Para evitar o padrão N+1 no frontend:
 - O detalhe apresenta summary, planned vs performed sem score, séries WARMUP/WORKING em grid responsivo, carga/reps/RIR/duração, notes e exercícios legados por snapshot.
 - A Home agora possui link real para `/history`; o BottomNav considera `/stats`, `/history` e descendentes como Evolução ativa.
 
+---
+
+### Task 3.6 — Frontend: Evolução, Analytics e PRs (IMPLEMENTADA)
+
+- `/stats` tornou-se o dashboard principal de Evolução sem remover streak, heatmap, treinos concluídos, taxa de conclusão ou tempo total da área de Consistência.
+- O navegador resolve o timezone IANA com `Intl.DateTimeFormat().resolvedOptions().timeZone`; a Server Action chama weekly para 4, 8 ou 12 semanas e reutiliza exatamente `startDate`/`endDate` na chamada muscular, sem UTC ou timezone fixo implícito.
+- O resumo agrega somente fatos já retornados nas semanas: treinos, séries válidas, volume de carga e duração. Não existem scores ou julgamentos automáticos de volume.
+- O gráfico semanal é uma implementação leve em CSS, responsiva e acessível, preservando semanas com zero e oferecendo descrição textual por semana. Nenhuma biblioteca de charts foi adicionada.
+- A distribuição muscular usa os 13 grupos canônicos, separa séries diretas e indiretas sem fatores fracionários, exibe cobertura classificada/não classificada e nunca soma incidências musculares como total de séries.
+- A descoberta de exercício usa busca com debounce por Server Action e `listExercises`; resultados de catálogo não disparam `getExerciseEvolution`, evitando N+1.
+- `/stats/exercises/[exerciseId]` apresenta metadata, load PR real, carga máxima por sessão, top sets, carga/reps/RIR/volume, séries fornecidas pela própria evolução e paginação por cursor opaco com dedupe por `workoutSessionId`.
+- A navegação é bidirecional: sessões da evolução apontam para `/history/[sessionId]` e exercícios canônicos do detalhe histórico apontam para `/stats/exercises/[exerciseId]`.
+- Orval permanece server-only: Server Components fazem a primeira leitura e Client Components usam apenas Server Actions. Cada carga do dashboard faz 2 chamadas constantes; cada página individual faz 1 chamada, sem fetch por músculo, semana, resultado de busca ou sessão.
+
+## Fase 3 — History & Evolution: READY
+
+As Tasks 3.1 a 3.6 estão concluídas. Histórico, analytics, Coach Training Context Tools e interfaces de Evolução compartilham os contratos e regras de domínio existentes, sem RAG ou MCP implementados nesta fase.
+
 
 
 
