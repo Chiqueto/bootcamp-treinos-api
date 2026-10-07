@@ -656,6 +656,18 @@ Para evitar o padrão N+1 no frontend:
     - `getWeeklyTrainingAnalytics(params)`
     - `getMuscleTrainingAnalytics(params)`
 
+---
+
+### Task 3.5 — Frontend: Histórico de Treinos (IMPLEMENTADA)
+
+- Rotas mobile-first criadas em `/history` e `/history/[sessionId]`, mantendo `/stats` sem redesign.
+- A primeira página da timeline e o detalhe são Server Components autenticados que consomem diretamente os clients Orval server-only.
+- Filtros e paginação ficam em Client Component e acessam a API somente por `loadWorkoutHistoryPage`, uma Server Action sem `userId`/`athleteId` no contrato.
+- O cursor permanece opaco; o frontend apenas armazena e reenvia. Paginação usa `IntersectionObserver` com botão acessível de fallback, dedupe por `session.id`, bloqueio de cursor em voo e geração de request contra race de filtros.
+- Timeline cobre snapshots históricos, origem planejada/avulsa, métricas compactas, estados de loading, erro, retry e empty global/por filtro.
+- O detalhe apresenta summary, planned vs performed sem score, séries WARMUP/WORKING em grid responsivo, carga/reps/RIR/duração, notes e exercícios legados por snapshot.
+- A Home agora possui link real para `/history`; o BottomNav considera `/stats`, `/history` e descendentes como Evolução ativa.
+
 
 
 
