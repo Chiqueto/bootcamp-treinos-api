@@ -10,8 +10,11 @@ interface InputDto {
 interface OutputDto {
   id: string;
   name: string;
+  nextWorkoutDayId?: string | null;
+  lastCompletedWorkoutDayId?: string | null;
   workoutDays: Array<{
     id: string;
+    order: number;
     weekDay: WeekDay;
     name: string;
     isRest: boolean;
@@ -30,6 +33,7 @@ export class GetWorkoutPlan {
       },
       include: {
         workoutDays: {
+          orderBy: [{ order: "asc" }, { createdAt: "asc" }],
           include: {
             _count: {
               select: { exercises: true },
@@ -43,11 +47,48 @@ export class GetWorkoutPlan {
       throw new NotFoundError("Workout plan not found");
     }
 
+    // Busca a última sessão concluída deste plano para saber o próximo treino da rotação
+    const lastCompletedSession = await prisma.workoutSession.findFirst({
+      where: {
+        athleteId: dto.userId,
+        completedAt: { not: null },
+        OR: [
+          { workoutPlanId: workoutPlan.id },
+          { workoutDay: { workoutPlanId: workoutPlan.id } },
+        ],
+      },
+      orderBy: { completedAt: "desc" },
+    });
+
+    const trainingDays = workoutPlan.workoutDays.filter((d) => !d.isRest);
+    let nextWorkoutDayId: string | null = null;
+    let lastCompletedWorkoutDayId: string | null = null;
+
+    if (trainingDays.length > 0) {
+      if (!lastCompletedSession || !lastCompletedSession.workoutDayId) {
+        nextWorkoutDayId = trainingDays[0].id;
+      } else {
+        lastCompletedWorkoutDayId = lastCompletedSession.workoutDayId;
+        const lastIndex = trainingDays.findIndex(
+          (d) => d.id === lastCompletedSession.workoutDayId,
+        );
+        if (lastIndex === -1) {
+          nextWorkoutDayId = trainingDays[0].id;
+        } else {
+          nextWorkoutDayId =
+            trainingDays[(lastIndex + 1) % trainingDays.length].id;
+        }
+      }
+    }
+
     return {
       id: workoutPlan.id,
       name: workoutPlan.name,
+      nextWorkoutDayId,
+      lastCompletedWorkoutDayId,
       workoutDays: workoutPlan.workoutDays.map((day) => ({
         id: day.id,
+        order: day.order,
         weekDay: day.weekDay,
         name: day.name,
         isRest: day.isRest,

@@ -27,7 +27,8 @@ export const WorkoutExerciseSchema = z.object({
 export const WorkoutDaySchema = z
   .object({
     name: z.string().trim().min(1),
-    weekDay: z.enum(WeekDay),
+    order: z.number().int().min(0).optional().default(0),
+    weekDay: z.enum(WeekDay).optional().default(WeekDay.MONDAY),
     isRest: z.boolean().default(false),
     estimatedDurationInSeconds: z.number().min(0),
     coverImageUrl: z.url().nullable().optional(),
@@ -141,9 +142,12 @@ export const GetWorkoutPlanParamsSchema = z.object({
 export const GetWorkoutPlanResponseSchema = z.object({
   id: z.uuid(),
   name: z.string(),
+  nextWorkoutDayId: z.uuid().nullable().optional(),
+  lastCompletedWorkoutDayId: z.uuid().nullable().optional(),
   workoutDays: z.array(
     z.object({
       id: z.uuid(),
+      order: z.number().optional().default(0),
       weekDay: z.enum(WeekDay),
       name: z.string(),
       isRest: z.boolean(),
@@ -157,11 +161,13 @@ export const GetWorkoutPlanResponseSchema = z.object({
 export const GetWorkoutDayParamsSchema = z.object({
   id: z.uuid(),
   dayId: z.uuid(),
+  order: z.number().optional(),
 });
 
 export const GetWorkoutDayResponseSchema = z.object({
   id: z.uuid(),
   name: z.string(),
+  order: z.number().optional().default(0),
   isRest: z.boolean(),
   coverImageUrl: z.string().nullable().optional(),
   estimatedDurationInSeconds: z.number(),
@@ -203,6 +209,7 @@ export const HomeResponseSchema = z.object({
       workoutPlanId: z.uuid(),
       id: z.uuid(),
       name: z.string(),
+      order: z.number().optional(),
       isRest: z.boolean(),
       weekDay: z.enum(WeekDay),
       estimatedDurationInSeconds: z.number(),
@@ -210,6 +217,16 @@ export const HomeResponseSchema = z.object({
       exercisesCount: z.number(),
     })
     .optional(),
+  lastCompletedWorkoutDay: z
+    .object({
+      id: z.uuid(),
+      name: z.string(),
+      completedAt: z.string(),
+    })
+    .optional(),
+  isLastWorkoutCompletedToday: z.boolean().optional(),
+  rotationIndex: z.number().optional(),
+  totalWorkoutsInRotation: z.number().optional(),
   workoutStreak: z.number(),
   consistencyByDay: z.record(
     z.iso.date(),
@@ -236,6 +253,7 @@ export const ListWorkoutPlansResponseSchema = z.object({
       workoutDays: z.array(
         z.object({
           id: z.uuid(),
+          order: z.number().optional().default(0),
           name: z.string(),
           weekDay: z.enum(WeekDay),
           isRest: z.boolean(),

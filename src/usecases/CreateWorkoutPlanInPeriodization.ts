@@ -13,7 +13,8 @@ interface InputDto {
   name: string;
   workoutDays: Array<{
     name: string;
-    weekDay: WeekDay;
+    order?: number;
+    weekDay?: WeekDay;
     isRest: boolean;
     estimatedDurationInSeconds: number;
     coverImageUrl?: string | null;
@@ -131,9 +132,10 @@ export class CreateWorkoutPlanInPeriodization {
           userId: dto.userId,
           isActive: false, // Invariante: sempre inativo quando criado em periodização
           workoutDays: {
-            create: dto.workoutDays.map((workoutDay) => ({
+            create: dto.workoutDays.map((workoutDay, index) => ({
               name: workoutDay.name,
-              weekDay: workoutDay.weekDay,
+              order: workoutDay.order ?? index,
+              weekDay: workoutDay.weekDay ?? WeekDay.MONDAY,
               isRest: workoutDay.isRest,
               estimatedDurationInSeconds: workoutDay.estimatedDurationInSeconds,
               coverImageUrl: workoutDay.coverImageUrl ?? null,
@@ -153,8 +155,11 @@ export class CreateWorkoutPlanInPeriodization {
         },
         include: {
           workoutDays: {
+            orderBy: [{ order: "asc" }, { createdAt: "asc" }],
             include: {
-              exercises: true,
+              exercises: {
+                orderBy: { order: "asc" },
+              },
             },
           },
         },
@@ -202,6 +207,7 @@ export class CreateWorkoutPlanInPeriodization {
           isActive: workoutPlan.isActive,
           workoutDays: workoutPlan.workoutDays.map((day) => ({
             name: day.name,
+            order: day.order,
             weekDay: day.weekDay,
             isRest: day.isRest,
             estimatedDurationInSeconds: day.estimatedDurationInSeconds,

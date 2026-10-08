@@ -67,6 +67,7 @@ export class DuplicateWorkoutPlan {
           workoutDays: {
             create: original.workoutDays.map((day) => ({
               name: day.name,
+              order: day.order,
               weekDay: day.weekDay,
               isRest: day.isRest,
               estimatedDurationInSeconds: day.estimatedDurationInSeconds,
@@ -92,7 +93,7 @@ export class DuplicateWorkoutPlan {
                 orderBy: { order: "asc" },
               },
             },
-            orderBy: { createdAt: "asc" },
+            orderBy: [{ order: "asc" }, { createdAt: "asc" }],
           },
         },
       });
@@ -103,6 +104,7 @@ export class DuplicateWorkoutPlan {
         isActive: duplicatedPlan.isActive,
         workoutDays: duplicatedPlan.workoutDays.map((day) => ({
           id: day.id,
+          order: day.order,
           name: day.name,
           weekDay: day.weekDay,
           isRest: day.isRest,

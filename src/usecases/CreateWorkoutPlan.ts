@@ -14,7 +14,8 @@ interface InputDto {
   activate?: boolean;
   workoutDays: Array<{
     name: string;
-    weekDay: WeekDay;
+    order?: number;
+    weekDay?: WeekDay;
     isRest: boolean;
     estimatedDurationInSeconds: number;
     coverImageUrl?: string | null;
@@ -35,6 +36,7 @@ interface OutputDto {
   isActive: boolean;
   workoutDays: Array<{
     name: string;
+    order?: number;
     weekDay: WeekDay;
     isRest: boolean;
     estimatedDurationInSeconds: number;
@@ -97,9 +99,10 @@ export class CreateWorkoutPlan {
             userId: dto.userId,
             isActive: shouldActivate,
             workoutDays: {
-              create: dto.workoutDays.map((workoutDay) => ({
+              create: dto.workoutDays.map((workoutDay, index) => ({
                 name: workoutDay.name,
-                weekDay: workoutDay.weekDay,
+                order: workoutDay.order ?? index,
+                weekDay: workoutDay.weekDay ?? WeekDay.MONDAY,
                 isRest: workoutDay.isRest,
                 estimatedDurationInSeconds: workoutDay.estimatedDurationInSeconds,
                 coverImageUrl: workoutDay.coverImageUrl ?? null,
@@ -125,8 +128,11 @@ export class CreateWorkoutPlan {
         },
         include: {
           workoutDays: {
+            orderBy: [{ order: "asc" }, { createdAt: "asc" }],
             include: {
-              exercises: true,
+              exercises: {
+                orderBy: { order: "asc" },
+              },
             },
           },
         },
@@ -142,6 +148,7 @@ export class CreateWorkoutPlan {
           isActive: result.isActive,
           workoutDays: result.workoutDays.map((day) => ({
             name: day.name,
+            order: day.order,
             weekDay: day.weekDay,
             isRest: day.isRest,
             estimatedDurationInSeconds: day.estimatedDurationInSeconds,

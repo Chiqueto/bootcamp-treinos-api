@@ -24,12 +24,21 @@ interface OutputDto {
     workoutPlanId: string;
     id: string;
     name: string;
+    order?: number;
     isRest: boolean;
     weekDay: WeekDayValue;
     estimatedDurationInSeconds: number;
     coverImageUrl: string | null;
     exercisesCount: number;
   };
+  lastCompletedWorkoutDay?: {
+    id: string;
+    name: string;
+    completedAt: string;
+  };
+  isLastWorkoutCompletedToday?: boolean;
+  rotationIndex?: number;
+  totalWorkoutsInRotation?: number;
   workoutStreak: number;
   consistencyByDay: Record<
     string,
@@ -65,10 +74,97 @@ export class GetHomeData {
       throw new NotFoundError("Active workout plan not found");
     }
 
-    // Find today's workout day
-    const todayWorkoutDay = activeWorkoutPlan.workoutDays.find(
-      (day) => day.weekDay === currentWeekDay,
-    );
+    // 1. Filtrar e ordenar treinos ativos na rotação (excluindo descanso)
+    const WEEKDAY_ORDER = [
+      "MONDAY",
+      "TUESDAY",
+      "WEDNESDAY",
+      "THURSDAY",
+      "FRIDAY",
+      "SATURDAY",
+      "SUNDAY",
+    ];
+
+    const trainingDays = activeWorkoutPlan.workoutDays
+      .filter((day) => !day.isRest)
+      .sort((a, b) => {
+        if (
+          typeof a.order === "number" &&
+          typeof b.order === "number" &&
+          a.order !== b.order
+        ) {
+          return a.order - b.order;
+        }
+        const orderA = WEEKDAY_ORDER.indexOf(a.weekDay as string);
+        const orderB = WEEKDAY_ORDER.indexOf(b.weekDay as string);
+        if (orderA !== -1 && orderB !== -1) return orderA - orderB;
+        return a.name.localeCompare(b.name);
+      });
+
+    // 2. Buscar a última sessão concluída pelo usuário no plano ativo
+    const lastCompletedSession = await prisma.workoutSession.findFirst({
+      where: {
+        athleteId: dto.userId,
+        completedAt: { not: null },
+        OR: [
+          { workoutPlanId: activeWorkoutPlan.id },
+          { workoutDay: { workoutPlanId: activeWorkoutPlan.id } },
+        ],
+      },
+      orderBy: { completedAt: "desc" },
+      include: {
+        workoutDay: true,
+      },
+    });
+
+    // 3. Determinar o próximo treino na rotação sequencial (ontem fez peito -> próximo é costas)
+    let nextWorkoutDay = trainingDays[0] ?? activeWorkoutPlan.workoutDays[0];
+    let nextWorkoutIndex = 0;
+
+    if (trainingDays.length > 0) {
+      if (!lastCompletedSession || !lastCompletedSession.workoutDayId) {
+        nextWorkoutDay = trainingDays[0];
+        nextWorkoutIndex = 0;
+      } else {
+        const lastIndex = trainingDays.findIndex(
+          (d) => d.id === lastCompletedSession.workoutDayId,
+        );
+        if (lastIndex === -1) {
+          nextWorkoutDay = trainingDays[0];
+          nextWorkoutIndex = 0;
+        } else {
+          nextWorkoutIndex = (lastIndex + 1) % trainingDays.length;
+          nextWorkoutDay = trainingDays[nextWorkoutIndex];
+        }
+      }
+    }
+
+    const currentDateStr = currentDate.format("YYYY-MM-DD");
+    let isLastWorkoutCompletedToday = false;
+    let lastCompletedWorkoutDayData: {
+      id: string;
+      name: string;
+      completedAt: string;
+    } | undefined = undefined;
+
+    if (lastCompletedSession && lastCompletedSession.completedAt) {
+      const sessionCompletedDate = dayjs
+        .utc(lastCompletedSession.completedAt)
+        .utcOffset(dto.timezoneOffset)
+        .format("YYYY-MM-DD");
+      if (sessionCompletedDate === currentDateStr) {
+        isLastWorkoutCompletedToday = true;
+      }
+      if (lastCompletedSession.workoutDay) {
+        lastCompletedWorkoutDayData = {
+          id: lastCompletedSession.workoutDay.id,
+          name: lastCompletedSession.workoutDay.name,
+          completedAt: lastCompletedSession.completedAt.toISOString(),
+        };
+      }
+    }
+
+    const todayWorkoutDay = nextWorkoutDay;
 
     // Calculate week range (Sunday to Saturday) adjusted for user's timezone
     // weekStart/weekEnd represent local midnight boundaries converted to UTC
@@ -159,6 +255,7 @@ export class GetHomeData {
               workoutPlanId: activeWorkoutPlan.id,
               id: todayWorkoutDay.id,
               name: todayWorkoutDay.name,
+              order: todayWorkoutDay.order,
               isRest: todayWorkoutDay.isRest,
               weekDay: todayWorkoutDay.weekDay,
               estimatedDurationInSeconds:
@@ -167,6 +264,10 @@ export class GetHomeData {
               exercisesCount: todayWorkoutDay.exercises.length,
             }
           : undefined,
+      lastCompletedWorkoutDay: lastCompletedWorkoutDayData,
+      isLastWorkoutCompletedToday,
+      rotationIndex: trainingDays.length > 0 ? nextWorkoutIndex + 1 : 1,
+      totalWorkoutsInRotation: trainingDays.length,
       workoutStreak,
       consistencyByDay,
     };
