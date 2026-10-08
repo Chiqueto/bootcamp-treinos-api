@@ -18,6 +18,9 @@ import { GetWorkoutPlan } from "../usecases/GetWorkoutPlan.js";
 import { ListExercises } from "../usecases/ListExercises.js";
 import { ListWorkoutHistory } from "../usecases/ListWorkoutHistory.js";
 import { UpsertUserTrainData } from "../usecases/UpsertUserTrainData.js";
+import { GamificationTheme } from "../schemas/index.js";
+
+
 
 const ALL_WEEK_DAYS = [
   "MONDAY",
@@ -295,6 +298,10 @@ export function getAiTools(userId: string, context: AiToolsContext = {}) {
           .nullable()
           .optional()
           .describe("Percentual de gordura corporal opcional (0 a 100)"),
+        gamificationTheme: z
+          .enum(GamificationTheme)
+          .optional()
+          .describe("Tema de gamificação preferido (ALL, ANIMES, VEHICLES, ANIMALS, MOVIES_SERIES)"),
       }),
       execute: async (params) => {
         const upsertUserTrainData = new UpsertUserTrainData();
@@ -304,9 +311,11 @@ export function getAiTools(userId: string, context: AiToolsContext = {}) {
           heightInCentimeters: params.heightInCentimeters,
           age: params.age,
           bodyFatPercentage: params.bodyFatPercentage ?? 0,
+          gamificationTheme: params.gamificationTheme,
         });
       },
     }),
+
 
     getRecentTrainingHistory: tool({
       description:

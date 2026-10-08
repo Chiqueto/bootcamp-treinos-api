@@ -1,5 +1,6 @@
 import { NotFoundError } from "../errors/index.js";
 import { prisma } from "../lib/db.js";
+import { GamificationTheme } from "../schemas/index.js";
 
 interface InputDto {
   userId: string;
@@ -12,7 +13,9 @@ interface OutputDto {
   heightInCentimeters: number;
   age: number;
   bodyFatPercentage: number;
+  gamificationTheme: GamificationTheme;
 }
+
 
 export class GetUserTrainData {
   async execute(dto: InputDto): Promise<OutputDto | null> {
@@ -40,6 +43,9 @@ export class GetUserTrainData {
       heightInCentimeters: user.heightInCentimeters,
       age: user.age,
       bodyFatPercentage: user.bodyFatPercentage,
+      gamificationTheme: (user.gamificationTheme as GamificationTheme) || GamificationTheme.ALL,
     };
+
   }
 }
+

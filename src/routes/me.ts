@@ -7,10 +7,13 @@ import { auth } from "../lib/auth.js";
 import {
   ErrorSchema,
   GetUserTrainDataResponseSchema,
+  UpdateGamificationThemeBodySchema,
+  UpdateGamificationThemeResponseSchema,
   UserTrainDataBodySchema,
   UserTrainDataResponseSchema,
 } from "../schemas/index.js";
 import { GetUserTrainData } from "../usecases/GetUserTrainData.js";
+import { UpdateGamificationTheme } from "../usecases/UpdateGamificationTheme.js";
 import { UpsertUserTrainData } from "../usecases/UpsertUserTrainData.js";
 
 export const meRoutes = async (app: FastifyInstance) => {
@@ -96,6 +99,50 @@ export const meRoutes = async (app: FastifyInstance) => {
           heightInCentimeters: request.body.heightInCentimeters,
           age: request.body.age,
           bodyFatPercentage: request.body.bodyFatPercentage,
+          gamificationTheme: request.body.gamificationTheme,
+        });
+
+        return reply.status(200).send(result);
+      } catch (error) {
+        app.log.error(error);
+        return reply.status(500).send({
+          error: "Internal server error",
+          code: "INTERNAL_SERVER_ERROR",
+        });
+      }
+    },
+  });
+
+  app.withTypeProvider<ZodTypeProvider>().route({
+    method: "PATCH",
+    url: "/theme",
+    schema: {
+      operationId: "updateGamificationTheme",
+      tags: ["Me"],
+      summary: "Update user gamification theme preference",
+      body: UpdateGamificationThemeBodySchema,
+      response: {
+        200: UpdateGamificationThemeResponseSchema,
+        401: ErrorSchema,
+        500: ErrorSchema,
+      },
+    },
+    handler: async (request, reply) => {
+      try {
+        const session = await auth.api.getSession({
+          headers: fromNodeHeaders(request.headers),
+        });
+        if (!session) {
+          return reply.status(401).send({
+            error: "Unauthorized",
+            code: "UNAUTHORIZED",
+          });
+        }
+
+        const updateGamificationTheme = new UpdateGamificationTheme();
+        const result = await updateGamificationTheme.execute({
+          userId: session.user.id,
+          theme: request.body.theme,
         });
 
         return reply.status(200).send(result);
@@ -109,3 +156,4 @@ export const meRoutes = async (app: FastifyInstance) => {
     },
   });
 };
+

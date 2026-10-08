@@ -39,7 +39,9 @@ interface OutputDto {
   isLastWorkoutCompletedToday?: boolean;
   rotationIndex?: number;
   totalWorkoutsInRotation?: number;
+  gamificationTheme?: "ALL" | "ANIMES" | "VEHICLES" | "ANIMALS" | "MOVIES_SERIES";
   workoutStreak: number;
+
   consistencyByDay: Record<
     string,
     {
@@ -61,6 +63,11 @@ export class GetHomeData {
         isActive: true,
       },
       include: {
+        user: {
+          select: {
+            gamificationTheme: true,
+          },
+        },
         workoutDays: {
           include: {
             exercises: true,
@@ -68,6 +75,7 @@ export class GetHomeData {
           },
         },
       },
+
     });
 
     if (!activeWorkoutPlan) {
@@ -268,8 +276,10 @@ export class GetHomeData {
       isLastWorkoutCompletedToday,
       rotationIndex: trainingDays.length > 0 ? nextWorkoutIndex + 1 : 1,
       totalWorkoutsInRotation: trainingDays.length,
+      gamificationTheme: (activeWorkoutPlan.user?.gamificationTheme as any) ?? "ALL",
       workoutStreak,
       consistencyByDay,
+
     };
   }
 }
