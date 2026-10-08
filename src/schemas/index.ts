@@ -10,6 +10,18 @@ import {
 
 export const WorkoutSessionOriginSchema = z.enum(WorkoutSessionOrigin);
 
+export const GamificationTheme = {
+  ALL: "ALL",
+  ANIMES: "ANIMES",
+  VEHICLES: "VEHICLES",
+  ANIMALS: "ANIMALS",
+  MOVIES_SERIES: "MOVIES_SERIES",
+} as const;
+
+export type GamificationTheme =
+  (typeof GamificationTheme)[keyof typeof GamificationTheme];
+
+
 export const ErrorSchema = z.object({
   error: z.string(),
   code: z.string(),
@@ -27,7 +39,8 @@ export const WorkoutExerciseSchema = z.object({
 export const WorkoutDaySchema = z
   .object({
     name: z.string().trim().min(1),
-    weekDay: z.enum(WeekDay),
+    order: z.number().int().min(0).optional().default(0),
+    weekDay: z.enum(WeekDay).optional().default(WeekDay.MONDAY),
     isRest: z.boolean().default(false),
     estimatedDurationInSeconds: z.number().min(0),
     coverImageUrl: z.url().nullable().optional(),
@@ -141,9 +154,12 @@ export const GetWorkoutPlanParamsSchema = z.object({
 export const GetWorkoutPlanResponseSchema = z.object({
   id: z.uuid(),
   name: z.string(),
+  nextWorkoutDayId: z.uuid().nullable().optional(),
+  lastCompletedWorkoutDayId: z.uuid().nullable().optional(),
   workoutDays: z.array(
     z.object({
       id: z.uuid(),
+      order: z.number().optional().default(0),
       weekDay: z.enum(WeekDay),
       name: z.string(),
       isRest: z.boolean(),
@@ -157,11 +173,13 @@ export const GetWorkoutPlanResponseSchema = z.object({
 export const GetWorkoutDayParamsSchema = z.object({
   id: z.uuid(),
   dayId: z.uuid(),
+  order: z.number().optional(),
 });
 
 export const GetWorkoutDayResponseSchema = z.object({
   id: z.uuid(),
   name: z.string(),
+  order: z.number().optional().default(0),
   isRest: z.boolean(),
   coverImageUrl: z.string().nullable().optional(),
   estimatedDurationInSeconds: z.number(),
@@ -203,6 +221,7 @@ export const HomeResponseSchema = z.object({
       workoutPlanId: z.uuid(),
       id: z.uuid(),
       name: z.string(),
+      order: z.number().optional(),
       isRest: z.boolean(),
       weekDay: z.enum(WeekDay),
       estimatedDurationInSeconds: z.number(),
@@ -210,7 +229,19 @@ export const HomeResponseSchema = z.object({
       exercisesCount: z.number(),
     })
     .optional(),
+  lastCompletedWorkoutDay: z
+    .object({
+      id: z.uuid(),
+      name: z.string(),
+      completedAt: z.string(),
+    })
+    .optional(),
+  isLastWorkoutCompletedToday: z.boolean().optional(),
+  rotationIndex: z.number().optional(),
+  totalWorkoutsInRotation: z.number().optional(),
+  gamificationTheme: z.enum(GamificationTheme).optional(),
   workoutStreak: z.number(),
+
   consistencyByDay: z.record(
     z.iso.date(),
     z.object({
@@ -236,6 +267,7 @@ export const ListWorkoutPlansResponseSchema = z.object({
       workoutDays: z.array(
         z.object({
           id: z.uuid(),
+          order: z.number().optional().default(0),
           name: z.string(),
           weekDay: z.enum(WeekDay),
           isRest: z.boolean(),
@@ -279,11 +311,22 @@ export const StatsResponseSchema = z.object({
   totalTimeInSeconds: z.number(),
 });
 
+export const UpdateGamificationThemeBodySchema = z.object({
+
+  theme: z.enum(GamificationTheme),
+});
+
+export const UpdateGamificationThemeResponseSchema = z.object({
+  userId: z.string(),
+  gamificationTheme: z.enum(GamificationTheme),
+});
+
 export const UserTrainDataBodySchema = z.object({
   weightInGrams: z.number().min(1),
   heightInCentimeters: z.number().min(1),
   age: z.number().min(1),
   bodyFatPercentage: z.number().min(0).max(100),
+  gamificationTheme: z.enum(GamificationTheme).optional(),
 });
 
 export const UserTrainDataResponseSchema = z.object({
@@ -292,6 +335,7 @@ export const UserTrainDataResponseSchema = z.object({
   heightInCentimeters: z.number(),
   age: z.number(),
   bodyFatPercentage: z.number(),
+  gamificationTheme: z.enum(GamificationTheme),
 });
 
 export const GetUserTrainDataResponseSchema = z
@@ -302,8 +346,10 @@ export const GetUserTrainDataResponseSchema = z
     heightInCentimeters: z.number(),
     age: z.number(),
     bodyFatPercentage: z.number(),
+    gamificationTheme: z.enum(GamificationTheme),
   })
   .nullable();
+
 
 export const CreateWorkoutSetParamsSchema = z.object({
   sessionExerciseId: z.uuid(),

@@ -13,6 +13,7 @@ import {
 
 import { aiRoutes } from "../routes/ai.js";
 import { exerciseRoutes } from "../routes/exercise.js";
+import { historyRoutes } from "../routes/history.js";
 import { homeRoutes } from "../routes/home.js";
 import { meRoutes } from "../routes/me.js";
 import { periodizationRoutes } from "../routes/periodization.js";
@@ -20,6 +21,7 @@ import { planningRoutes } from "../routes/planning.js";
 import { statsRoutes } from "../routes/stats.js";
 import { WorkoutPlanRoutes } from "../routes/workout-plan.js";
 import { workoutSessionRoutes } from "../routes/workout-session.js";
+
 
 const app = Fastify();
 app.setValidatorCompiler(validatorCompiler);
@@ -50,7 +52,9 @@ await app.register(statsRoutes, { prefix: "/stats" });
 await app.register(meRoutes, { prefix: "/me" });
 await app.register(aiRoutes, { prefix: "/ai" });
 await app.register(exerciseRoutes, { prefix: "/exercises" });
+await app.register(historyRoutes, { prefix: "/history" });
 await app.register(workoutSessionRoutes);
+
 
 await app.ready();
 const swaggerSpec = app.swagger();

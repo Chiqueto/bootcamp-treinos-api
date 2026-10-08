@@ -71,7 +71,9 @@ model User {
   heightInCentimeters Int?
   age                 Int?
   bodyFatPercentage   Int? // 100 representa 100%
+  gamificationTheme   String           @default("ALL")
   createdExercises    Exercise[]
+
   workoutSessions     WorkoutSession[]
   periodizations      Periodization[]
   aiConversations     AiConversation[]
@@ -139,7 +141,8 @@ model WorkoutDay {
   isRest                     Boolean           @default(false)
   estimatedDurationInSeconds Int
   coverImageUrl              String?
-  weekDay                    WeekDay
+  weekDay                    WeekDay           @default(MONDAY)
+  order                      Int               @default(0)
   exercises                  WorkoutExercise[]
   createdAt                  DateTime          @default(now()) @db.Timestamptz()
   updatedAt                  DateTime          @updatedAt @db.Timestamptz()

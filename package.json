@@ -12,7 +12,13 @@
   "engines": {
     "node": "24.x"
   },
+  "allowScripts": {
+    "@prisma/engines": true,
+    "esbuild": true,
+    "prisma": true
+  },
   "keywords": [],
+
   "author": "",
   "license": "ISC",
   "type": "module",
