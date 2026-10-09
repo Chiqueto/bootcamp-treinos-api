@@ -48,6 +48,7 @@ export const exerciseRoutes: FastifyPluginAsyncZod = async (app) => {
         const result = await listExercises.execute({
           userId: session.user.id,
           query: request.query.q,
+          onlyWithHistory: request.query.onlyWithHistory === "true",
         });
 
         return reply.status(200).send(result);
