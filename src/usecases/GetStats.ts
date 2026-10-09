@@ -128,10 +128,12 @@ export class GetStats {
       },
     });
 
+    const nowInUserTz = dayjs().utc().utcOffset(dto.timezoneOffset);
+
     const workoutStreak = activeWorkoutPlan
       ? calculateWorkoutStreak({
           workoutDays: activeWorkoutPlan.workoutDays,
-          currentDate: toDate,
+          currentDate: nowInUserTz,
           timezoneOffset: dto.timezoneOffset,
           additionalSessions: freeCompletedSessions,
         })
