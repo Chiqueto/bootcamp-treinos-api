@@ -404,6 +404,11 @@ export const GetWorkoutSessionParamsSchema = z.object({
   sessionId: z.uuid(),
 });
 
+export const CancelWorkoutSessionResponseSchema = z.object({
+  success: z.boolean(),
+  sessionId: z.string().uuid(),
+});
+
 export const WorkoutSessionSetResponseSchema = z.object({
   id: z.uuid(),
   order: z.number().int(),
@@ -477,6 +482,7 @@ export const ExerciseResponseSchema = z.object({
 
 export const ListExercisesQuerySchema = z.object({
   q: z.string().optional(),
+  onlyWithHistory: z.string().optional(),
 });
 
 export const CreateExerciseBodySchema = z.object({

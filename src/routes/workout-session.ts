@@ -12,6 +12,7 @@ import { auth } from "../lib/auth.js";
 import {
   AddSessionExerciseBodySchema,
   AddSessionExerciseParamsSchema,
+  CancelWorkoutSessionResponseSchema,
   CompleteWorkoutSessionResponseSchema,
   CreateWorkoutSetBodySchema,
   CreateWorkoutSetParamsSchema,
@@ -28,6 +29,7 @@ import {
   WorkoutSetResponseSchema,
 } from "../schemas/index.js";
 import { AddExerciseToWorkoutSession } from "../usecases/AddExerciseToWorkoutSession.js";
+import { CancelWorkoutSession } from "../usecases/CancelWorkoutSession.js";
 import { CompleteWorkoutSession } from "../usecases/CompleteWorkoutSession.js";
 import { CreateWorkoutSet } from "../usecases/CreateWorkoutSet.js";
 import { DeleteWorkoutSet } from "../usecases/DeleteWorkoutSet.js";
@@ -188,6 +190,67 @@ export const workoutSessionRoutes: FastifyPluginAsyncZod = async (app) => {
           return reply.status(400).send({
             error: error.message,
             code: "PENDING_WORKOUT_SETS",
+          });
+        }
+
+        app.log.error(error);
+        return reply.status(500).send({
+          error: "Internal server error",
+          code: "INTERNAL_SERVER_ERROR",
+        });
+      }
+    },
+  });
+
+  // DELETE /workout-sessions/:sessionId
+  app.route({
+    method: "DELETE",
+    url: "/workout-sessions/:sessionId",
+    schema: {
+      operationId: "cancelWorkoutSession",
+      tags: ["Workout Session"],
+      summary: "Cancel and discard an active workout session",
+      params: GetWorkoutSessionParamsSchema,
+      response: {
+        200: CancelWorkoutSessionResponseSchema,
+        400: ErrorSchema,
+        401: ErrorSchema,
+        404: ErrorSchema,
+        409: ErrorSchema,
+        500: ErrorSchema,
+      },
+    },
+    handler: async (request, reply) => {
+      try {
+        const session = await auth.api.getSession({
+          headers: fromNodeHeaders(request.headers),
+        });
+        if (!session) {
+          return reply.status(401).send({
+            error: "Unauthorized",
+            code: "UNAUTHORIZED",
+          });
+        }
+
+        const cancelWorkoutSession = new CancelWorkoutSession();
+        const result = await cancelWorkoutSession.execute({
+          userId: session.user.id,
+          sessionId: request.params.sessionId,
+        });
+
+        return reply.status(200).send(result);
+      } catch (error) {
+        if (error instanceof NotFoundError) {
+          return reply.status(404).send({
+            error: error.message,
+            code: "NOT_FOUND",
+          });
+        }
+
+        if (error instanceof ConflictError) {
+          return reply.status(409).send({
+            error: error.message,
+            code: "CONFLICT",
           });
         }
 
