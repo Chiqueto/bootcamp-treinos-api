@@ -4,7 +4,7 @@ import {
   WorkoutPlanNotActiveError,
 } from "../errors/index.js";
 import { Prisma } from "../generated/prisma/client.js";
-import { WorkoutSessionOrigin } from "../generated/prisma/enums.js";
+import { SetType, WorkoutSessionOrigin } from "../generated/prisma/enums.js";
 import { prisma } from "../lib/db.js";
 
 interface InputDto {
@@ -106,6 +106,39 @@ export class StartWorkoutSession {
               plannedRestTimeInSeconds: exercise.restTimeInSeconds,
             },
           });
+
+          const setsToCreate: Prisma.WorkoutSetCreateManyInput[] = [];
+          let setOrder = 1;
+
+          const warmupCount = Math.max(0, exercise.warmupSets ?? 0);
+          for (let i = 0; i < warmupCount; i++) {
+            setsToCreate.push({
+              id: crypto.randomUUID(),
+              sessionExerciseId: created.id,
+              order: setOrder++,
+              type: SetType.WARMUP,
+              reps: exercise.reps ?? null,
+              weightInGrams: null,
+            });
+          }
+
+          const workingCount = Math.max(0, exercise.sets ?? 0);
+          for (let i = 0; i < workingCount; i++) {
+            setsToCreate.push({
+              id: crypto.randomUUID(),
+              sessionExerciseId: created.id,
+              order: setOrder++,
+              type: SetType.WORKING,
+              reps: exercise.reps ?? null,
+              weightInGrams: null,
+            });
+          }
+
+          if (setsToCreate.length > 0) {
+            await tx.workoutSet.createMany({
+              data: setsToCreate,
+            });
+          }
 
           createdExercises.push({
             id: created.id,
