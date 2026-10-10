@@ -5,6 +5,7 @@ import { validateIanaTimezone } from "../domain/analytics-dates.js";
 import { Prisma } from "../generated/prisma/client.js";
 import { WeekDay } from "../generated/prisma/enums.js";
 import { prisma } from "../lib/db.js";
+import { GamificationTheme } from "../schemas/index.js";
 import { CreatePeriodizationDraftFromAI } from "../usecases/CreatePeriodizationDraftFromAI.js";
 import { CreateWorkoutPlan } from "../usecases/CreateWorkoutPlan.js";
 import { GetExerciseEvolution } from "../usecases/GetExerciseEvolution.js";
@@ -18,7 +19,6 @@ import { GetWorkoutPlan } from "../usecases/GetWorkoutPlan.js";
 import { ListExercises } from "../usecases/ListExercises.js";
 import { ListWorkoutHistory } from "../usecases/ListWorkoutHistory.js";
 import { UpsertUserTrainData } from "../usecases/UpsertUserTrainData.js";
-import { GamificationTheme } from "../schemas/index.js";
 
 
 

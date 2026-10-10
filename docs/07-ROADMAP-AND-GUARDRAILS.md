@@ -45,7 +45,7 @@
 
 **Saída alcançada:** Hub completo de planejamento onde o usuário gerencia planos standalone, ciclos macro de periodização e interage com o Coach AI de forma estritamente consentida.
 
-## Fase 3 — Histórico & Evolução [PRÓXIMA FASE]
+## Fase 3 — Histórico & Evolução [READY]
 
 Fronteiras e escopo previsto:
 - sessões executadas e histórico temporal;
@@ -55,7 +55,16 @@ Fronteiras e escopo previsto:
 - evolução temporal de rendimento;
 - comparação planejado vs executado (planned vs performed).
 
-## Fase 4 — Biblioteca
+## Fase 4 — Identity & Commercial [EM ANDAMENTO]
+
+- [x] Task 4.1 — Identity & Commercial Foundation.
+- [ ] Task 4.2 — Admin Console (próxima; não iniciada).
+
+Identidade, planos, assinaturas, entitlements, intent OAuth, backfill e bootstrap operacional:
+[09 — Commercial Foundation](09-COMMERCIAL-FOUNDATION.md).
+Fase 4 não está marcada como pronta. Não há gating global, cobrança ou vínculo CoachAthlete.
+
+## Backlog futuro — Biblioteca (antiga proposta de Fase 4)
 
 - upload PDF;
 - storage;

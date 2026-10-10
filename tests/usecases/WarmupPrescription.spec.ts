@@ -349,10 +349,12 @@ describe("Warmup Prescription & AI Support (Task 2.8.2)", () => {
       expect(savedDb?.sets).toBe(3);
     });
 
-    it("SYSTEM_PROMPT contém diretrizes de parcimônia e semântica de warmupSets", () => {
+    it("SYSTEM_PROMPT distingue aquecimento principal, acessórios e séries válidas", () => {
       const prompt = getSystemPrompt("Carlos");
       expect(prompt).toContain("warmupSets");
-      expect(prompt).toContain("parcimônia");
+      expect(prompt).toContain("warmupSets: 1..2");
+      expect(prompt).toContain("warmupSets: 0");
+      expect(prompt).toContain("séries válidas/de trabalho");
       expect(prompt).toContain("compostos");
       expect(prompt).toContain("isoladores");
     });

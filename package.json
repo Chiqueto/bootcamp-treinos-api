@@ -4,7 +4,12 @@
   "description": "",
   "scripts": {
     "dev": "tsx --watch src/index.ts .env",
-    "build": "prisma generate && prisma migrate deploy && tsc",
+    "build": "prisma generate && tsc",
+    "commercial:bootstrap": "tsx src/scripts/commercial-bootstrap.ts",
+    "admin:grant": "tsx src/scripts/admin-role.ts grant",
+    "admin:revoke": "tsx src/scripts/admin-role.ts revoke",
+    "openapi:export": "tsx src/scripts/export_swagger.ts",
+    "migrate:test": "prisma migrate deploy --config prisma.test.config.ts",
     "migrate:deploy": "prisma migrate deploy",
     "test": "vitest run",
     "test:watch": "vitest"

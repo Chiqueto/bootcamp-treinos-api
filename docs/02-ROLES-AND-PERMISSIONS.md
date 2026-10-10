@@ -1,6 +1,16 @@
 # 02 — Papéis e Permissões
 
-## Princípio
+## Estado implementado — Task 4.1
+
+`User.accountType` (ATHLETE/COACH) é independente de `User.systemRole` (USER/ADMIN).
+Plano, assinatura e entitlements são entidades comerciais separadas. COACH não é ADMIN;
+nenhum dos dois ganha assinatura paga automaticamente. Cadastro público nunca aceita systemRole.
+INTERNAL é um **plano privado**, atribuído exclusivamente por operação confiável futura, não um papel de usuário.
+O resolver central concede somente entitlements de assinatura elegível; não há gating global nesta task.
+Permissões de terceiros, vínculo CoachAthlete e matriz abaixo continuam **ALVO**, não recursos implementados.
+Detalhes operacionais e signup: [09 — Commercial Foundation](09-COMMERCIAL-FOUNDATION.md).
+
+## Princípio de ownership
 
 Papéis comerciais não substituem ownership.
 
@@ -40,7 +50,7 @@ Papel interno para suporte, operação e métricas administrativas. Ações crí
 
 ## INTERNAL
 
-Entitlement especial para fundador/dev/QA. Pode liberar recursos e ignorar cotas; não é plano comercial público.
+Plano privado para operação interna/dev/QA. Só concede os entitlements configurados quando explicitamente atribuído em uma assinatura elegível; não há bypass por email ou papel ADMIN.
 
 ## Relação Coach ↔ Atleta
 

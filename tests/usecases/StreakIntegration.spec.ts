@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { WeekDay } from "../../src/generated/prisma/enums.js";
 import { GetHomeData } from "../../src/usecases/GetHomeData.js";
@@ -17,6 +17,7 @@ describe("Streak Parity Integration Tests: GetHomeData vs GetStats", () => {
   const getStats = new GetStats();
 
   afterEach(async () => {
+    vi.useRealTimers();
     await cleanupTestUsers(createdUserIds);
     createdUserIds.length = 0;
   });
@@ -47,6 +48,9 @@ describe("Streak Parity Integration Tests: GetHomeData vs GetStats", () => {
 
     // Simula data atual = Quarta (2026-03-11)
     const testDate = "2026-03-11";
+    // GetStats uses now; compare both use cases at the same instant, without
+    // faking timers used by Prisma/network I/O.
+    vi.setSystemTime(new Date("2026-03-11T12:00:00Z"));
 
     // Sessão concluída na Segunda (2026-03-09)
     await createTestWorkoutSession(dayMon.id, {
