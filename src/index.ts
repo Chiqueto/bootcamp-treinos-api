@@ -14,7 +14,9 @@ import z from "zod";
 
 import { auth, authBaseUrl, trustedOrigins } from "./lib/auth.js";
 import { env } from "./lib/env.js";
+import { adminRoutes } from "./routes/admin.js";
 import { aiRoutes } from "./routes/ai.js";
+import { commercialRoutes } from "./routes/commercial.js";
 import { exerciseRoutes } from "./routes/exercise.js";
 import { historyRoutes } from "./routes/history.js";
 import { homeRoutes } from "./routes/home.js";
@@ -104,6 +106,8 @@ await app.register(aiRoutes, { prefix: "/ai" });
 await app.register(exerciseRoutes, { prefix: "/exercises" });
 await app.register(historyRoutes, { prefix: "/history" });
 await app.register(workoutSessionRoutes);
+await app.register(commercialRoutes);
+await app.register(adminRoutes, { prefix: "/admin" });
 
 app.withTypeProvider<ZodTypeProvider>().route({
   method: "GET",

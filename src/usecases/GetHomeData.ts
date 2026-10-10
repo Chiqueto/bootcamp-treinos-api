@@ -5,7 +5,6 @@ import { NotFoundError } from "../errors/index.js";
 import { prisma } from "../lib/db.js";
 import {
   calculateWorkoutStreak,
-  WEEKDAY_MAP,
   WeekDayValue,
 } from "../lib/streak.js";
 
@@ -54,7 +53,6 @@ interface OutputDto {
 export class GetHomeData {
   async execute(dto: InputDto): Promise<OutputDto> {
     const currentDate = dayjs.utc(dto.date);
-    const currentWeekDay = WEEKDAY_MAP[currentDate.day()];
 
     // Find active workout plan
     const activeWorkoutPlan = await prisma.workoutPlan.findFirst({
@@ -276,7 +274,7 @@ export class GetHomeData {
       isLastWorkoutCompletedToday,
       rotationIndex: trainingDays.length > 0 ? nextWorkoutIndex + 1 : 1,
       totalWorkoutsInRotation: trainingDays.length,
-      gamificationTheme: (activeWorkoutPlan.user?.gamificationTheme as any) ?? "ALL",
+      gamificationTheme: (activeWorkoutPlan.user?.gamificationTheme as OutputDto["gamificationTheme"]) ?? "ALL",
       workoutStreak,
       consistencyByDay,
 

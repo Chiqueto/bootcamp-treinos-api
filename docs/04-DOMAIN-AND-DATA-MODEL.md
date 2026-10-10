@@ -1,6 +1,18 @@
 # 04 — Domínio e Modelo de Dados
 
-## Estratégia
+## Fundação comercial implementada — Task 4.1
+
+User ganha accountType (ATHLETE/COACH), systemRole (USER/ADMIN) e accountSetupCompletedAt nullable.
+Plan possui code único, audiência, preço/moeda e publicação. PlanEntitlement tem unique(planId, entitlement).
+Subscription tem unique(userId), status, billingProvider e snapshots de preço/moeda.
+BillingCustomer prepara unique(userId, provider) e unique(provider, externalCustomerId).
+SignupIntent guarda somente hash de token criptográfico, intenção validada, expiração e consumo.
+A migration aditiva inicializa usuários anteriores como ATHLETE/USER, setup completo e ATHLETE_FREE ACTIVE;
+novos usuários OAuth permanecem incompletos até conclusão transacional.
+GetCommercialContext resolve entitlements com tempo real, sem associar ADMIN a assinatura.
+Asaas é apenas adapter futuro. Modelo e invariantes: [09 — Commercial Foundation](09-COMMERCIAL-FOUNDATION.md).
+
+## Estratégia de evolução
 
 Evoluir o domínio existente sem reescrita geral.
 

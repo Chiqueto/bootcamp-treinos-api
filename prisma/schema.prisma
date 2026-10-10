@@ -58,6 +58,13 @@ enum MuscleRole {
 
 model User {
   id                  String           @id
+  accountType         AccountType      @default(ATHLETE)
+  systemRole          SystemRole       @default(USER)
+  accountSetupCompletedAt DateTime?    @db.Timestamptz()
+  subscription        Subscription?
+  billingCustomers    BillingCustomer[]
+  adminAuditActions   AdminAuditLog[] @relation("AuditActor")
+  adminAuditTargets   AdminAuditLog[] @relation("AuditTarget")
   workoutPlans        WorkoutPlan[]
   name                String
   email               String
@@ -359,5 +366,151 @@ model AiToolExecution {
 
   @@unique([userId, toolCallId])
   @@index([userId, toolName])
+}
+
+enum AccountType {
+  ATHLETE
+  COACH
+}
+
+enum SystemRole {
+  USER
+  ADMIN
+}
+
+enum PlanAudience {
+  ATHLETE
+  COACH
+  INTERNAL
+}
+
+enum SubscriptionStatus {
+  PENDING
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  EXPIRED
+}
+
+enum BillingProvider {
+  NONE
+  MANUAL
+  ASAAS
+}
+
+enum EntitlementKey {
+  COACH_DASHBOARD
+  MANAGE_ATHLETES
+  ASSIGN_WORKOUTS
+  VIEW_ATHLETE_HISTORY
+  ADVANCED_STATS
+  AI_CHAT
+  AI_PLAN_GENERATION
+  SOURCE_LIBRARY
+}
+
+model Plan {
+  id                  String @id @default(uuid())
+  code                String @unique
+  name                String
+  description         String?
+  audience            PlanAudience
+  monthlyPriceInCents  Int
+  currency            String @default("BRL")
+  isPublic            Boolean @default(false)
+  isActive            Boolean @default(true)
+  sortOrder           Int @default(0)
+  createdAt           DateTime @default(now()) @db.Timestamptz()
+  updatedAt           DateTime @updatedAt @db.Timestamptz()
+  entitlements        PlanEntitlement[]
+  subscriptions       Subscription[]
+  signupIntents       SignupIntent[]
+}
+
+model PlanEntitlement {
+  id          String @id @default(uuid())
+  planId      String
+  plan        Plan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  entitlement EntitlementKey
+  limitValue  Int?
+  createdAt   DateTime @default(now()) @db.Timestamptz()
+  @@unique([planId, entitlement])
+}
+
+model Subscription {
+  id                      String @id @default(uuid())
+  userId                  String @unique
+  user                    User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planId                  String
+  plan                    Plan @relation(fields: [planId], references: [id], onDelete: Restrict)
+  status                  SubscriptionStatus
+  billingProvider         BillingProvider @default(NONE)
+  priceInCentsSnapshot     Int
+  currencySnapshot        String
+  externalSubscriptionId  String?
+  trialStartedAt          DateTime? @db.Timestamptz()
+  trialEndsAt             DateTime? @db.Timestamptz()
+  currentPeriodStart      DateTime? @db.Timestamptz()
+  currentPeriodEnd        DateTime? @db.Timestamptz()
+  canceledAt              DateTime? @db.Timestamptz()
+  createdAt               DateTime @default(now()) @db.Timestamptz()
+  updatedAt               DateTime @updatedAt @db.Timestamptz()
+  @@index([planId])
+  @@unique([billingProvider, externalSubscriptionId])
+}
+
+model BillingCustomer {
+  id                  String @id @default(uuid())
+  userId              String
+  user                User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider            BillingProvider
+  externalCustomerId  String
+  createdAt           DateTime @default(now()) @db.Timestamptz()
+  updatedAt           DateTime @updatedAt @db.Timestamptz()
+  @@unique([userId, provider])
+  @@unique([provider, externalCustomerId])
+}
+
+model SignupIntent {
+  id          String @id @default(uuid())
+  tokenHash   String @unique
+  accountType AccountType
+  planId      String
+  plan        Plan @relation(fields: [planId], references: [id], onDelete: Restrict)
+  expiresAt   DateTime @db.Timestamptz()
+  consumedAt  DateTime? @db.Timestamptz()
+  createdAt   DateTime @default(now()) @db.Timestamptz()
+  @@index([expiresAt])
+}
+
+enum AdminAuditAction {
+  PLAN_UPDATED
+  PLAN_ENTITLEMENTS_UPDATED
+  SUBSCRIPTION_TRIAL_GRANTED
+  SUBSCRIPTION_TRIAL_EXTENDED
+  SUBSCRIPTION_ACTIVATED
+  SUBSCRIPTION_PLAN_CHANGED
+  SUBSCRIPTION_CANCELED
+}
+
+model AdminAuditLog {
+  id           String @id @default(uuid())
+  adminUserId  String
+  admin        User @relation("AuditActor", fields: [adminUserId], references: [id], onDelete: Restrict)
+  action       AdminAuditAction
+  targetUserId String?
+  targetUser   User? @relation("AuditTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
+  entityType   String
+  entityId     String?
+  before       Json?
+  after        Json?
+  metadata     Json?
+  createdAt    DateTime @default(now()) @db.Timestamptz()
+
+  @@index([adminUserId, createdAt])
+  @@index([targetUserId, createdAt])
+  @@index([entityType, entityId])
+  @@index([createdAt, id])
 }
 

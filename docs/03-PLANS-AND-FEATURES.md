@@ -1,6 +1,17 @@
 # 03 — Planos e Funcionalidades
 
-## Princípio comercial
+## Catálogo implementado — Task 4.1
+
+Bootstrap insert-only: ATHLETE_FREE (0 BRL), COACH (3990 centavos), COACH_AI (7990 centavos)
+e INTERNAL (privado, 0). Preço, publicação e limites são dados editáveis, nunca constantes de autorização.
+COACH prepara 5 alunos e COACH_AI 15 via MANAGE_ATHLETES; ainda não há vínculo/contagem de alunos.
+Escolher um plano Coach cria assinatura PENDING/NONE, sem liberar entitlements pagos.
+Usuários existentes recebem ATHLETE_FREE/ACTIVE/NONE e mantêm recursos individuais atuais, inclusive IA.
+Assinaturas guardam snapshot de preço/moeda. Bootstrap recorrente não sobrescreve edições administrativas.
+As demais ofertas/recursos descritos abaixo são visão ALVO; AI INDIVIDUAL, biblioteca e RAG não foram implementados.
+Veja [09 — Commercial Foundation](09-COMMERCIAL-FOUNDATION.md).
+
+## Visão comercial de longo prazo
 
 O plano gratuito deve ser útil de verdade. A receita vem principalmente de automação, IA e gestão de alunos.
 

@@ -1,7 +1,7 @@
 import "dotenv/config";
 
 import fs from "node:fs";
-import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import fastifySwagger from "@fastify/swagger";
 import Fastify from "fastify";
@@ -11,7 +11,9 @@ import {
   validatorCompiler,
 } from "fastify-type-provider-zod";
 
+import { adminRoutes } from "../routes/admin.js";
 import { aiRoutes } from "../routes/ai.js";
+import { commercialRoutes } from "../routes/commercial.js";
 import { exerciseRoutes } from "../routes/exercise.js";
 import { historyRoutes } from "../routes/history.js";
 import { homeRoutes } from "../routes/home.js";
@@ -54,13 +56,15 @@ await app.register(aiRoutes, { prefix: "/ai" });
 await app.register(exerciseRoutes, { prefix: "/exercises" });
 await app.register(historyRoutes, { prefix: "/history" });
 await app.register(workoutSessionRoutes);
+await app.register(commercialRoutes);
+await app.register(adminRoutes, { prefix: "/admin" });
 
 
 await app.ready();
 const swaggerSpec = app.swagger();
 
-const targetPath = path.resolve(
-  "c:/Users/luis-chiqueto/Documents/Proj/treinos/bootcamp-treinos-frontend/swagger.json"
+const targetPath = fileURLToPath(
+  new URL("../../../bootcamp-treinos-frontend/swagger.json", import.meta.url),
 );
 fs.writeFileSync(targetPath, JSON.stringify(swaggerSpec, null, 2), "utf-8");
 console.log(`Swagger spec successfully written to: ${targetPath}`);
